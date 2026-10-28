@@ -11,10 +11,10 @@ AVATEK is an offline-first Android music player with a premium black, metallic-g
 - Local audio discovery through MediaStore with runtime permission handling
 - Search across track title, artist, and album
 - Persistent local favorites and a favorites-only filter
-- Track list metadata including artist, album, and duration
-- Play, pause, previous, next, and track selection
+- Track metadata: artist, album, and duration
+- Track selection, play/pause, previous/next, and playback seek bar
 - Persian-first dark luxury interface
-- GitHub Actions workflow to compile the debug APK
+- GitHub Actions workflow for debug APK compilation
 
 ## Build prerequisites
 
@@ -22,14 +22,13 @@ AVATEK is an offline-first Android music player with a premium black, metallic-g
 - JDK 17
 - Gradle 8.14.3 or compatible version
 
-The project currently does not include Gradle Wrapper files. The CI workflow installs Gradle directly. A successful compile has not yet been confirmed, so the pull request remains a draft until GitHub Actions reports a successful build.
+The repository does not currently include Gradle Wrapper files. CI installs Gradle directly. The Android SDK setup has been fixed and the first Gradle compilation is being checked; review the linked Pull Request's Checks tab for the current result.
 
 ## Next milestones
 
-1. Confirm the first green CI build and fix any compile/runtime issues.
-2. Add a full now-playing screen with seek bar, elapsed/remaining time, and repeat/shuffle.
-3. Add dedicated album and artist browsing screens.
-4. Add editable playlists and queue management.
-5. Add lyrics, visualizer, and equalizer integration after playback stability is verified.
+1. Confirm a green CI build and address any compile or runtime issues.
+2. Add dedicated album and artist browsing screens.
+3. Add editable playlists, queue controls, repeat, and shuffle.
+4. Add lyrics, visualizer, and equalizer integration after playback stability is verified.
 
 AVATEK is designed for local playback first. No account, cloud library, or online music catalog is assumed.
