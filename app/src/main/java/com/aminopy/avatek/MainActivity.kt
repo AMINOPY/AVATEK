@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +38,8 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -88,6 +89,8 @@ class MainActivity : ComponentActivity() {
     private val showFavorites = mutableStateOf(false)
     private val positionMs = mutableStateOf(0L)
     private val durationMs = mutableStateOf(0L)
+    private val repeatMode = mutableStateOf(Player.REPEAT_MODE_OFF)
+    private val shuffleEnabled = mutableStateOf(false)
     private val progressHandler = Handler(Looper.getMainLooper())
     private val progressUpdater = object : Runnable {
         override fun run() {
@@ -118,6 +121,14 @@ class MainActivity : ComponentActivity() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             playing.value = isPlaying
         }
+
+        override fun onRepeatModeChanged(mode: Int) {
+            repeatMode.value = mode
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            shuffleEnabled.value = shuffleModeEnabled
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -143,7 +154,11 @@ class MainActivity : ComponentActivity() {
                         onNext = { skipNext() },
                         positionMs = positionMs.value,
                         durationMs = durationMs.value,
-                        onSeek = { seekTo(it) }
+                        onSeek = { seekTo(it) },
+                        repeatMode = repeatMode.value,
+                        shuffleEnabled = shuffleEnabled.value,
+                        onToggleRepeat = { toggleRepeat() },
+                        onToggleShuffle = { toggleShuffle() }
                     )
                 }
             }
@@ -222,6 +237,8 @@ class MainActivity : ComponentActivity() {
                 currentTitle.value = mediaController.currentMediaItem?.mediaMetadata?.title?.toString()
                     ?: "هیچ آهنگی در حال پخش نیست"
                 playing.value = mediaController.isPlaying
+                repeatMode.value = mediaController.repeatMode
+                shuffleEnabled.value = mediaController.shuffleModeEnabled
             }.onFailure {
                 libraryMessage.value = "اتصال موتور پخش برقرار نشد. برنامه را دوباره باز کن."
             }
@@ -253,6 +270,20 @@ class MainActivity : ComponentActivity() {
 
     private fun skipNext() {
         controller?.let { player -> if (player.hasNextMediaItem()) player.seekToNextMediaItem() }
+    }
+
+    private fun toggleRepeat() {
+        controller?.let { player ->
+            player.repeatMode = when (player.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                else -> Player.REPEAT_MODE_OFF
+            }
+        }
+    }
+
+    private fun toggleShuffle() {
+        controller?.let { player -> player.shuffleModeEnabled = !player.shuffleModeEnabled }
     }
 
     private fun togglePlayback() {
@@ -290,7 +321,11 @@ private fun AvatekHome(
     onNext: () -> Unit,
     positionMs: Long,
     durationMs: Long,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    repeatMode: Int,
+    shuffleEnabled: Boolean,
+    onToggleRepeat: () -> Unit,
+    onToggleShuffle: () -> Unit
 ) {
     Column(
         modifier = Modifier
