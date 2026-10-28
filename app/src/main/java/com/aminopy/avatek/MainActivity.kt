@@ -29,6 +29,8 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -62,6 +65,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.aminopy.avatek.data.AudioLibraryRepository
 import com.aminopy.avatek.data.AudioTrack
+import com.aminopy.avatek.data.FavoriteStore
 import com.aminopy.avatek.playback.MusicPlaybackService
 import com.aminopy.avatek.playback.toMediaItem
 import com.aminopy.avatek.ui.theme.AvatekTheme
@@ -75,6 +79,8 @@ class MainActivity : ComponentActivity() {
     private val playing = mutableStateOf(false)
     private val libraryMessage = mutableStateOf("برای دیدن آهنگ‌های دستگاه، دسترسی کتابخانه را فعال کن.")
     private val searchQuery = mutableStateOf("")
+    private val favoriteIds = mutableStateListOf<Long>()
+    private val showFavorites = mutableStateOf(false)
     private var controller: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
@@ -109,6 +115,10 @@ class MainActivity : ComponentActivity() {
                         libraryMessage = libraryMessage.value,
                         searchQuery = searchQuery.value,
                         onSearchChange = { searchQuery.value = it },
+                        favoriteIds = favoriteIds.toSet(),
+                        showFavorites = showFavorites.value,
+                        onShowFavoritesChange = { showFavorites.value = it },
+                        onToggleFavorite = { toggleFavorite(it) },
                         onScan = { requestAudioPermission() },
                         onPlay = { index -> playTrack(index) },
                         onTogglePlayback = { togglePlayback() },
@@ -118,6 +128,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        favoriteIds.addAll(FavoriteStore(this).loadFavoriteIds())
         if (hasAudioPermission()) refreshLibrary()
     }
 
@@ -149,6 +160,11 @@ class MainActivity : ComponentActivity() {
     private fun requestAudioPermission() {
         if (hasAudioPermission()) refreshLibrary()
         else permissionLauncher.launch(requiredAudioPermission())
+    }
+
+    private fun toggleFavorite(trackId: Long) {
+        if (trackId in favoriteIds) favoriteIds.remove(trackId) else favoriteIds.add(trackId)
+        FavoriteStore(this).saveFavoriteIds(favoriteIds.toSet())
     }
 
     private fun refreshLibrary() {
@@ -237,6 +253,10 @@ private fun AvatekHome(
     libraryMessage: String,
     searchQuery: String,
     onSearchChange: (String) -> Unit,
+    favoriteIds: Set<Long>,
+    showFavorites: Boolean,
+    onShowFavoritesChange: (Boolean) -> Unit,
+    onToggleFavorite: (Long) -> Unit,
     onScan: () -> Unit,
     onPlay: (Int) -> Unit,
     onTogglePlayback: () -> Unit,
@@ -354,10 +374,24 @@ private fun AvatekHome(
             )
         )
         val normalizedQuery = searchQuery.trim()
-        val visibleTracks = if (normalizedQuery.isBlank()) tracks else tracks.filter { track ->
+        val filteredByFavorite = if (showFavorites) tracks.filter { it.id in favoriteIds } else tracks
+        val visibleTracks = if (normalizedQuery.isBlank()) filteredByFavorite else filteredByFavorite.filter { track ->
             track.title.contains(normalizedQuery, ignoreCase = true) ||
                 track.artist.contains(normalizedQuery, ignoreCase = true) ||
                 track.album.contains(normalizedQuery, ignoreCase = true)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = !showFavorites,
+                onClick = { onShowFavoritesChange(false) },
+                label = { Text("همهٔ آهنگ‌ها") }
+            )
+            FilterChip(
+                selected = showFavorites,
+                onClick = { onShowFavoritesChange(true) },
+                label = { Text("علاقه‌مندی‌ها") },
+                leadingIcon = { Icon(Icons.Rounded.Favorite, contentDescription = null, tint = AvatekColors.Gold) }
+            )
         }
         if (tracks.isEmpty()) {
             Button(
@@ -402,8 +436,15 @@ private fun AvatekHome(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        IconButton(onClick = { onPlay(index) }) {
-                            Icon(Icons.Rounded.PlayArrow, contentDescription = "پخش ${track.title}", tint = AvatekColors.Gold)
+                        IconButton(onClick = { onToggleFavorite(track.id) }) {
+                            Icon(
+                                if (track.id in favoriteIds) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = if (track.id in favoriteIds) "حذف از علاقه‌مندی‌ها" else "افزودن به علاقه‌مندی‌ها",
+                                tint = AvatekColors.Gold
+                            )
+                        }
+                        IconButton(onClick = { onPlay(tracks.indexOfFirst { it.id == track.id }) }) {
+                            Icon(Icons.Rounded.PlayArrow, contentDescription = "پخش " + track.title, tint = AvatekColors.Gold)
                         }
                     }
                 }
