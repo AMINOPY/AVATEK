@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -38,6 +40,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
@@ -47,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +74,7 @@ class MainActivity : ComponentActivity() {
     private val currentTitle = mutableStateOf("هیچ آهنگی در حال پخش نیست")
     private val playing = mutableStateOf(false)
     private val libraryMessage = mutableStateOf("برای دیدن آهنگ‌های دستگاه، دسترسی کتابخانه را فعال کن.")
+    private val searchQuery = mutableStateOf("")
     private var controller: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
@@ -101,6 +107,8 @@ class MainActivity : ComponentActivity() {
                         currentTitle = currentTitle.value,
                         isPlaying = playing.value,
                         libraryMessage = libraryMessage.value,
+                        searchQuery = searchQuery.value,
+                        onSearchChange = { searchQuery.value = it },
                         onScan = { requestAudioPermission() },
                         onPlay = { index -> playTrack(index) },
                         onTogglePlayback = { togglePlayback() },
@@ -227,6 +235,8 @@ private fun AvatekHome(
     currentTitle: String,
     isPlaying: Boolean,
     libraryMessage: String,
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
     onScan: () -> Unit,
     onPlay: (Int) -> Unit,
     onTogglePlayback: () -> Unit,
@@ -318,6 +328,37 @@ private fun AvatekHome(
         }
 
         Text("آهنگ‌های دستگاه", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            placeholder = { Text("جست‌وجوی آهنگ، هنرمند یا آلبوم", fontSize = 12.sp) },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = AvatekColors.Gold) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchChange("") }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "پاک‌کردن جست‌وجو", tint = AvatekColors.Muted)
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = AvatekColors.Gold,
+                unfocusedBorderColor = AvatekColors.Surface,
+                focusedContainerColor = AvatekColors.Surface,
+                unfocusedContainerColor = AvatekColors.Surface,
+                cursorColor = AvatekColors.Gold
+            )
+        )
+        val normalizedQuery = searchQuery.trim()
+        val visibleTracks = if (normalizedQuery.isBlank()) tracks else tracks.filter { track ->
+            track.title.contains(normalizedQuery, ignoreCase = true) ||
+                track.artist.contains(normalizedQuery, ignoreCase = true) ||
+                track.album.contains(normalizedQuery, ignoreCase = true)
+        }
         if (tracks.isEmpty()) {
             Button(
                 onClick = onScan,
@@ -327,12 +368,20 @@ private fun AvatekHome(
             ) {
                 Text("اجازه دسترسی و اسکن آهنگ‌ها", color = Color.White)
             }
+        } else if (visibleTracks.isEmpty()) {
+            Text(
+                "نتیجه‌ای برای " + normalizedQuery + " پیدا نشد.",
+                color = AvatekColors.Muted,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f, fill = true),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
+                itemsIndexed(visibleTracks, key = { _, track -> track.id }) { _, track ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -345,8 +394,13 @@ private fun AvatekHome(
                         Column(modifier = Modifier.weight(1f).padding(start = 11.dp)) {
                             Text(track.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(track.artist, color = AvatekColors.Muted, fontSize = 11.sp,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                track.artist + "  •  " + track.album + "  •  " + formatDuration(track.durationMs),
+                                color = AvatekColors.Muted,
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                         IconButton(onClick = { onPlay(index) }) {
                             Icon(Icons.Rounded.PlayArrow, contentDescription = "پخش ${track.title}", tint = AvatekColors.Gold)
@@ -364,6 +418,13 @@ private fun AvatekHome(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
     }
+}
+
+private fun formatDuration(durationMs: Long): String {
+    val totalSeconds = (durationMs / 1000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable
