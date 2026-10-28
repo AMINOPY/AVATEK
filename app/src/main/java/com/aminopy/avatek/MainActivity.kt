@@ -378,13 +378,12 @@ private fun AvatekHome(
                     }
                 }
                 Text(libraryMessage, color = AvatekColors.Muted, fontSize = 12.sp, lineHeight = 18.sp)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(currentTitle, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (isPlaying) "در حال پخش" else "پخش‌کنندهٔ محلی", color = AvatekColors.Muted, fontSize = 10.sp)
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onToggleShuffle) {
+                            Icon(Icons.Rounded.Shuffle, contentDescription = "پخش تصادفی",
+                                tint = if (shuffleEnabled) AvatekColors.Gold else AvatekColors.Muted)
+                        }
                         IconButton(onClick = onPrevious) {
                             Icon(Icons.Rounded.SkipPrevious, contentDescription = "آهنگ قبلی", tint = AvatekColors.Gold)
                         }
@@ -397,6 +396,10 @@ private fun AvatekHome(
                         }
                         IconButton(onClick = onNext) {
                             Icon(Icons.Rounded.SkipNext, contentDescription = "آهنگ بعدی", tint = AvatekColors.Gold)
+                        }
+                        IconButton(onClick = onToggleRepeat) {
+                            Icon(Icons.Rounded.Repeat, contentDescription = "حالت تکرار",
+                                tint = if (repeatMode != Player.REPEAT_MODE_OFF) AvatekColors.Gold else AvatekColors.Muted)
                         }
                     }
                     Slider(
@@ -414,6 +417,15 @@ private fun AvatekHome(
                         Text(formatDuration(positionMs), color = AvatekColors.Muted, fontSize = 10.sp)
                         Text(formatDuration(durationMs), color = AvatekColors.Muted, fontSize = 10.sp)
                     }
+                    Text(
+                        when (repeatMode) {
+                            Player.REPEAT_MODE_ALL -> "تکرار صف"
+                            Player.REPEAT_MODE_ONE -> "تکرار همین آهنگ"
+                            else -> if (shuffleEnabled) "پخش تصادفی روشن" else "پخش عادی"
+                        },
+                        color = AvatekColors.Muted,
+                        fontSize = 10.sp
+                    )
                 }
             }
         }
