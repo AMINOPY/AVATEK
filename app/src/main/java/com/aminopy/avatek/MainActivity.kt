@@ -31,6 +31,8 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -101,7 +103,9 @@ class MainActivity : ComponentActivity() {
                         libraryMessage = libraryMessage.value,
                         onScan = { requestAudioPermission() },
                         onPlay = { index -> playTrack(index) },
-                        onTogglePlayback = { togglePlayback() }
+                        onTogglePlayback = { togglePlayback() },
+                        onPrevious = { skipPrevious() },
+                        onNext = { skipNext() }
                     )
                 }
             }
@@ -190,6 +194,17 @@ class MainActivity : ComponentActivity() {
         mediaController.play()
     }
 
+    private fun skipPrevious() {
+        controller?.let { player ->
+            if (player.hasPreviousMediaItem()) player.seekToPreviousMediaItem()
+            else if (player.mediaItemCount > 0) player.seekTo(0, 0L)
+        }
+    }
+
+    private fun skipNext() {
+        controller?.let { player -> if (player.hasNextMediaItem()) player.seekToNextMediaItem() }
+    }
+
     private fun togglePlayback() {
         val mediaController = controller ?: return
         if (mediaController.isPlaying) mediaController.pause()
@@ -214,7 +229,9 @@ private fun AvatekHome(
     libraryMessage: String,
     onScan: () -> Unit,
     onPlay: (Int) -> Unit,
-    onTogglePlayback: () -> Unit
+    onTogglePlayback: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -273,12 +290,20 @@ private fun AvatekHome(
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(if (isPlaying) "در حال پخش" else "پخش‌کنندهٔ محلی", color = AvatekColors.Muted, fontSize = 10.sp)
                     }
-                    IconButton(onClick = onTogglePlayback) {
-                        Icon(
-                            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = if (isPlaying) "توقف موقت" else "پخش",
-                            tint = AvatekColors.Gold
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onPrevious) {
+                            Icon(Icons.Rounded.SkipPrevious, contentDescription = "آهنگ قبلی", tint = AvatekColors.Gold)
+                        }
+                        IconButton(onClick = onTogglePlayback) {
+                            Icon(
+                                if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                contentDescription = if (isPlaying) "توقف موقت" else "پخش",
+                                tint = AvatekColors.Gold
+                            )
+                        }
+                        IconButton(onClick = onNext) {
+                            Icon(Icons.Rounded.SkipNext, contentDescription = "آهنگ بعدی", tint = AvatekColors.Gold)
+                        }
                     }
                 }
             }
