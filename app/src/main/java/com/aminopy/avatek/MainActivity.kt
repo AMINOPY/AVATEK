@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +45,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -59,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -81,6 +86,18 @@ class MainActivity : ComponentActivity() {
     private val searchQuery = mutableStateOf("")
     private val favoriteIds = mutableStateListOf<Long>()
     private val showFavorites = mutableStateOf(false)
+    private val positionMs = mutableStateOf(0L)
+    private val durationMs = mutableStateOf(0L)
+    private val progressHandler = Handler(Looper.getMainLooper())
+    private val progressUpdater = object : Runnable {
+        override fun run() {
+            controller?.let { player ->
+                positionMs.value = player.currentPosition.coerceAtLeast(0L)
+                durationMs.value = player.duration.takeIf { it != C.TIME_UNSET && it > 0L } ?: 0L
+            }
+            progressHandler.postDelayed(this, 500L)
+        }
+    }
     private var controller: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
@@ -123,7 +140,10 @@ class MainActivity : ComponentActivity() {
                         onPlay = { index -> playTrack(index) },
                         onTogglePlayback = { togglePlayback() },
                         onPrevious = { skipPrevious() },
-                        onNext = { skipNext() }
+                        onNext = { skipNext() },
+                        positionMs = positionMs.value,
+                        durationMs = durationMs.value,
+                        onSeek = { seekTo(it) }
                     )
                 }
             }
@@ -135,9 +155,11 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         connectPlaybackController()
+        progressHandler.post(progressUpdater)
     }
 
     override fun onStop() {
+        progressHandler.removeCallbacks(progressUpdater)
         controller?.removeListener(playerListener)
         controller = null
         controllerFuture?.let { MediaController.releaseFuture(it) }
@@ -218,6 +240,10 @@ class MainActivity : ComponentActivity() {
         mediaController.play()
     }
 
+    private fun seekTo(position: Long) {
+        controller?.let { player -> if (player.duration > 0L) player.seekTo(position.coerceIn(0L, player.duration)) }
+    }
+
     private fun skipPrevious() {
         controller?.let { player ->
             if (player.hasPreviousMediaItem()) player.seekToPreviousMediaItem()
@@ -261,7 +287,10 @@ private fun AvatekHome(
     onPlay: (Int) -> Unit,
     onTogglePlayback: () -> Unit,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    positionMs: Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -334,6 +363,21 @@ private fun AvatekHome(
                         IconButton(onClick = onNext) {
                             Icon(Icons.Rounded.SkipNext, contentDescription = "آهنگ بعدی", tint = AvatekColors.Gold)
                         }
+                    }
+                    Slider(
+                        value = positionMs.toFloat().coerceIn(0f, durationMs.coerceAtLeast(1L).toFloat()),
+                        onValueChange = { onSeek(it.toLong()) },
+                        valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+                        enabled = durationMs > 0L,
+                        colors = SliderDefaults.colors(
+                            thumbColor = AvatekColors.Gold,
+                            activeTrackColor = AvatekColors.Gold,
+                            inactiveTrackColor = AvatekColors.Muted
+                        )
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(formatDuration(positionMs), color = AvatekColors.Muted, fontSize = 10.sp)
+                        Text(formatDuration(durationMs), color = AvatekColors.Muted, fontSize = 10.sp)
                     }
                 }
             }
