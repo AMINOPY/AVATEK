@@ -420,7 +420,7 @@ private fun AvatekHome(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(AvatekColors.Surface, RoundedCornerShape(15.dp))
-                            .clickable { onPlay(index) }
+                            .clickable { onPlay(tracks.indexOfFirst { it.id == track.id }) }
                             .padding(horizontal = 13.dp, vertical = 11.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
