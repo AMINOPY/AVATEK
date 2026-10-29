@@ -6,7 +6,7 @@ import androidx.media3.session.MediaSessionService
 
 /**
  * Owns the playback engine so audio can continue when the UI is not visible.
- * Track discovery and MediaController connection are wired in the next implementation step.
+ * The activity connects through MediaController and controls this session.
  */
 class MusicPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
