@@ -40,6 +40,14 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -72,6 +80,8 @@ import androidx.media3.session.SessionToken
 import com.aminopy.avatek.data.AudioLibraryRepository
 import com.aminopy.avatek.data.AudioTrack
 import com.aminopy.avatek.data.FavoriteStore
+import com.aminopy.avatek.data.PlaylistStore
+import com.aminopy.avatek.data.AudioPlaylist
 import com.aminopy.avatek.playback.MusicPlaybackService
 import com.aminopy.avatek.playback.toMediaItem
 import com.aminopy.avatek.ui.theme.AvatekTheme
@@ -91,6 +101,9 @@ class MainActivity : ComponentActivity() {
     private val durationMs = mutableStateOf(0L)
     private val repeatMode = mutableStateOf(Player.REPEAT_MODE_OFF)
     private val shuffleEnabled = mutableStateOf(false)
+    private val playlists = mutableStateListOf<AudioPlaylist>()
+    private val showPlaylists = mutableStateOf(false)
+    private val showAbout = mutableStateOf(false)
     private val progressHandler = Handler(Looper.getMainLooper())
     private val progressUpdater = object : Runnable {
         override fun run() {
@@ -158,12 +171,23 @@ class MainActivity : ComponentActivity() {
                         repeatMode = repeatMode.value,
                         shuffleEnabled = shuffleEnabled.value,
                         onToggleRepeat = { toggleRepeat() },
-                        onToggleShuffle = { toggleShuffle() }
+                        onToggleShuffle = { toggleShuffle() },
+                        playlists = playlists,
+                        showPlaylists = showPlaylists.value,
+                        onOpenPlaylists = { showPlaylists.value = true },
+                        onClosePlaylists = { showPlaylists.value = false },
+                        onCreatePlaylist = { name -> createPlaylist(name) },
+                        onDeletePlaylist = { id -> deletePlaylist(id) },
+                        showAbout = showAbout.value,
+                        onOpenAbout = { showAbout.value = true },
+                        onCloseAbout = { showAbout.value = false },
+                        onOpenSettings = { showAbout.value = true }
                     )
                 }
             }
         }
         favoriteIds.addAll(FavoriteStore(this).loadFavoriteIds())
+        playlists.addAll(PlaylistStore(this).loadPlaylists())
         if (hasAudioPermission()) refreshLibrary()
     }
 
@@ -202,6 +226,15 @@ class MainActivity : ComponentActivity() {
     private fun toggleFavorite(trackId: Long) {
         if (trackId in favoriteIds) favoriteIds.remove(trackId) else favoriteIds.add(trackId)
         FavoriteStore(this).saveFavoriteIds(favoriteIds.toSet())
+    }
+
+    private fun createPlaylist(name: String) {
+        val created = PlaylistStore(this).createPlaylist(name) ?: return
+        playlists.add(created)
+    }
+
+    private fun deletePlaylist(id: String) {
+        if (PlaylistStore(this).deletePlaylist(id)) playlists.removeAll { it.id == id }
     }
 
     private fun refreshLibrary() {
@@ -325,7 +358,17 @@ private fun AvatekHome(
     repeatMode: Int,
     shuffleEnabled: Boolean,
     onToggleRepeat: () -> Unit,
-    onToggleShuffle: () -> Unit
+    onToggleShuffle: () -> Unit,
+    playlists: List<AudioPlaylist>,
+    showPlaylists: Boolean,
+    onOpenPlaylists: () -> Unit,
+    onClosePlaylists: () -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+    onDeletePlaylist: (String) -> Unit,
+    showAbout: Boolean,
+    onOpenAbout: () -> Unit,
+    onCloseAbout: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -338,6 +381,7 @@ private fun AvatekHome(
             .padding(horizontal = 20.dp, vertical = 22.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        var menuExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -349,14 +393,37 @@ private fun AvatekHome(
                 Text("YOUR MUSIC. YOUR WORLD.", color = AvatekColors.Muted,
                     fontSize = 10.sp, letterSpacing = 2.sp)
             }
-            Box(
-                modifier = Modifier
-                    .background(AvatekColors.Surface, RoundedCornerShape(18.dp))
-                    .padding(13.dp)
-            ) {
-                Icon(Icons.Rounded.Headphones, contentDescription = "Offline music", tint = AvatekColors.Gold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "منوی اصلی", tint = AvatekColors.Gold)
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(text = { Text("پلی‌لیست‌های من") }, leadingIcon = { Icon(Icons.Rounded.QueueMusic, null) }, onClick = { menuExpanded = false; onOpenPlaylists() })
+                        DropdownMenuItem(text = { Text("همهٔ آهنگ‌ها") }, leadingIcon = { Icon(Icons.Rounded.LibraryMusic, null) }, onClick = { menuExpanded = false; onShowFavoritesChange(false) })
+                        DropdownMenuItem(text = { Text("علاقه‌مندی‌ها") }, leadingIcon = { Icon(Icons.Rounded.Favorite, null) }, onClick = { menuExpanded = false; onShowFavoritesChange(true) })
+                        DropdownMenuItem(text = { Text("اسکن دوبارهٔ کتابخانه") }, leadingIcon = { Icon(Icons.Rounded.Refresh, null) }, onClick = { menuExpanded = false; onScan() })
+                        DropdownMenuItem(text = { Text("تنظیمات") }, leadingIcon = { Icon(Icons.Rounded.Settings, null) }, onClick = { menuExpanded = false; onOpenSettings() })
+                        DropdownMenuItem(text = { Text("دربارهٔ AVATEK") }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { menuExpanded = false; onOpenAbout() })
+                    }
+                }
+                Box(modifier = Modifier.background(AvatekColors.Surface, RoundedCornerShape(18.dp)).padding(13.dp)) {
+                    Icon(Icons.Rounded.Headphones, contentDescription = "Offline music", tint = AvatekColors.Gold)
+                }
             }
         }
+        if (showPlaylists) PlaylistDialog(
+            playlists = playlists,
+            onDismiss = onClosePlaylists,
+            onCreate = onCreatePlaylist,
+            onDelete = onDeletePlaylist
+        )
+        if (showAbout) AlertDialog(
+            onDismissRequest = onCloseAbout,
+            title = { Text("AVATEK") },
+            text = { Text("پلیر موسیقی آفلاین؛ کتابخانه، علاقه‌مندی‌ها و پلی‌لیست‌ها روی دستگاه شما نگهداری می‌شوند.\n\nنسخهٔ پایهٔ تنظیمات؛ گزینه‌های پیشرفته پس از پیاده‌سازی واقعی اضافه می‌شوند.") },
+            confirmButton = { TextButton(onClick = onCloseAbout) { Text("بستن") } }
+        )
 
         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("صدای خودت را پیدا کن", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
