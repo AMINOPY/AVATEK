@@ -635,3 +635,61 @@ private fun FeatureTile(
         }
     }
 }
+
+
+@Composable
+private fun PlaylistDialog(
+    playlists: List<AudioPlaylist>,
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("پلی‌لیست‌های من") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("نام پلی‌لیست جدید") }
+                )
+                Button(
+                    onClick = {
+                        val clean = name.trim()
+                        if (clean.isNotEmpty()) {
+                            onCreate(clean)
+                            name = ""
+                        }
+                    },
+                    enabled = name.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AvatekColors.BloodRed)
+                ) { Text("ساخت پلی‌لیست", color = Color.White) }
+                if (playlists.isEmpty()) {
+                    Text("هنوز پلی‌لیستی نساخته‌ای.", color = AvatekColors.Muted)
+                } else {
+                    LazyColumn(modifier = Modifier.height(220.dp)) {
+                        itemsIndexed(playlists, key = { _, playlist -> playlist.id }) { _, playlist ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Rounded.QueueMusic, contentDescription = null, tint = AvatekColors.Gold)
+                                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                    Text(playlist.name, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${playlist.trackIds.size} آهنگ", color = AvatekColors.Muted, fontSize = 11.sp)
+                                }
+                                TextButton(onClick = { onDelete(playlist.id) }) { Text("حذف", color = AvatekColors.BloodRed) }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("تمام") } }
+    )
+}
