@@ -11,6 +11,7 @@ AVATEK is an offline-first Android music player with a premium black, metallic-g
 - Local audio discovery through MediaStore with runtime permission handling
 - Search across track title, artist, and album
 - Persistent local favorites and a favorites-only filter
+- Persistent offline playlist storage with create, add, remove, and delete operations
 - Track metadata: artist, album, and duration
 - Track selection, play/pause, previous/next, and playback seek bar
 - Persian-first dark luxury interface
