@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -133,7 +133,7 @@ private fun AddToPlaylistContent(vm: AvatekViewModel, ui: AppUi, sheet: Sheet.Ad
     if (vm.playlists.isEmpty()) {
         Text("هنوز پلی‌لیستی نداری؛ اولین را بساز.", color = p.muted, fontSize = 13.sp, modifier = Modifier.padding(22.dp))
     } else {
-        LazyColumn(Modifier.weight(1f, fill = false)) {
+        LazyColumn(Modifier.heightIn(max = 420.dp)) {
             itemsIndexed(vm.playlists, key = { _, pl -> pl.id }) { _, pl ->
                 MenuItem(Icons.Rounded.PlaylistPlay, "${pl.name}  (${pl.trackIds.size.fa()})") {
                     vm.addToPlaylist(pl.id, sheet.trackId); ui.dismissSheet()
