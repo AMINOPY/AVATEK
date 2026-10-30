@@ -134,8 +134,8 @@ fun GlassIconButton(
     Box(
         modifier = modifier
             .size(size)
-            .glass(CircleShape, haze, tint = if (active) p.accent else Color.White)
-            .bounceClick(onClick = onClick),
+            .bounceClick(onClick = onClick)
+            .glass(CircleShape, haze, tint = if (active) p.accent else Color.White),
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription, tint = color, modifier = Modifier.size(size * 0.5f))
@@ -156,9 +156,9 @@ fun GlassChip(
     val shape = RoundedCornerShape(50)
     Row(
         modifier = modifier
+            .bounceClick(pressedScale = 0.94f, onClick = onClick)
             .glass(shape, strength = 0.55f)
             .background(bg, shape)
-            .bounceClick(pressedScale = 0.94f, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -181,13 +181,13 @@ fun AccentButton(
     val shape = RoundedCornerShape(50)
     Row(
         modifier = modifier
+            .bounceClick(enabled = enabled, pressedScale = 0.95f, onClick = onClick)
             .shadow(if (enabled) 18.dp else 0.dp, shape, ambientColor = p.accent, spotColor = p.accent)
             .clip(shape)
             .background(
                 if (enabled) Brush.linearGradient(listOf(p.accent, p.accentDeep.copy(alpha = 0.95f)))
                 else Brush.linearGradient(listOf(Color(0x33FFFFFF), Color(0x22FFFFFF)))
             )
-            .bounceClick(enabled = enabled, pressedScale = 0.95f, onClick = onClick)
             .padding(horizontal = 22.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
