@@ -308,7 +308,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     fun toggleShuffle() { controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
-    fun setSpeed(value: Float) { controller?.setPlaybackParameters(PlaybackParameters(value.coerceIn(0.5f, 2f), 1f)) }
+    fun setPlaybackSpeed(value: Float) { controller?.setPlaybackParameters(PlaybackParameters(value.coerceIn(0.5f, 2f), 1f)) }
 
     // ---- queue ---------------------------------------------------------------------------------
     fun playNext(track: AudioTrack) {
