@@ -142,8 +142,10 @@ class MusicPlaybackService : MediaSessionService() {
             controller: MediaSession.ControllerInfo
         ): MediaSession.ConnectionResult {
             val commands = SessionCommands.Builder()
-                .addAllSessionCommands(MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.commands)
-                .apply { AvatekCommands.all.forEach { add(it) } }
+                .apply {
+                    MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.commands.forEach { add(it) }
+                    AvatekCommands.all.forEach { add(it) }
+                }
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(commands)
