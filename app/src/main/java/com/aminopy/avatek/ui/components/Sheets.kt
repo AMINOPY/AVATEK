@@ -157,7 +157,7 @@ private fun QueueContent(vm: AvatekViewModel, ui: AppUi) {
             modifier = Modifier.bounceClick(pressedScale = 0.9f) { vm.clearQueue(); ui.dismissSheet() }.padding(8.dp)
         )
     }
-    LazyColumn(Modifier.weight(1f, fill = false)) {
+    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
         itemsIndexed(vm.queueIds, key = { i, id -> "$i-$id" }) { index, id ->
             val t = vm.trackById(id) ?: return@itemsIndexed
             val current = index == vm.queueIndex
