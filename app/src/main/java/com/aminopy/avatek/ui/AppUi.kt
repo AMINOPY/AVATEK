@@ -37,3 +37,6 @@ val LocalVm = staticCompositionLocalOf<AvatekViewModel> { error("ViewModel not p
 
 /** Bottom space screens must reserve for the floating navigation bar and mini player. */
 val LocalBottomInset = staticCompositionLocalOf<Dp> { 160.dp }
+
+/** Asks the activity to request the audio permission (or rescan when it is already granted). */
+val LocalPermissionRequester = staticCompositionLocalOf<() -> Unit> { {} }
