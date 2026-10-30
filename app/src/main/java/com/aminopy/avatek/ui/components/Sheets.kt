@@ -221,7 +221,7 @@ fun SpeedPicker(vm: AvatekViewModel, modifier: Modifier = Modifier, onPicked: ()
         modifier, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f).forEach { s ->
-            GlassChip("${s}x".fa(), vm.speed == s, { vm.setSpeed(s); onPicked() })
+            GlassChip("${s}x".fa(), vm.speed == s, { vm.setPlaybackSpeed(s); onPicked() })
         }
     }
 }
