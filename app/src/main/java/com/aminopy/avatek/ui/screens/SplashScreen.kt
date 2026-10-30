@@ -40,7 +40,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     LaunchedEffect(Unit) {
         launch { ring.animateTo(1f, tween(1100, easing = Emphasized)) }
         launch { word.animateTo(1f, tween(900, delayMillis = 500, easing = Emphasized)) }
-        launch { tag.animateTo(1f, tween(700, delay = 1000)) }
+        launch { tag.animateTo(1f, tween(700, delayMillis = 1000)) }
         kotlinx.coroutines.delay(1900)
         onFinished()
     }
