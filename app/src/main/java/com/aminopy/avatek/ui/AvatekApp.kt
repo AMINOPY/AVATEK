@@ -77,10 +77,12 @@ fun AvatekApp(
     requestPermission: () -> Unit,
     requestLyricsImport: () -> Unit = {},
     requestBackupExport: () -> Unit = {},
-    requestBackupImport: () -> Unit = {}
+    requestBackupImport: () -> Unit = {},
+    requestNotificationPermission: () -> Unit = {},
+    openNotificationSettings: () -> Unit = {}
 ) {
     val nav = remember { Navigator() }
-    val ui = remember { AppUi(nav, requestLyricsImport, requestBackupExport, requestBackupImport) }
+    val ui = remember { AppUi(nav, requestLyricsImport, requestBackupExport, requestBackupImport, requestNotificationPermission, openNotificationSettings) }
     val haze = rememberHazeState()
     var splash by rememberSaveable { mutableStateOf(true) }
 
