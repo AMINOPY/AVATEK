@@ -2,6 +2,7 @@ package com.aminopy.avatek.state
 
 import android.app.Application
 import android.content.ComponentName
+import android.net.Uri
 import android.os.Bundle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +24,7 @@ import com.aminopy.avatek.data.AudioPlaylist
 import com.aminopy.avatek.data.AudioTrack
 import com.aminopy.avatek.data.FavoriteStore
 import com.aminopy.avatek.data.HistoryStore
+import com.aminopy.avatek.data.LyricsStore
 import com.aminopy.avatek.data.PlaylistStore
 import com.aminopy.avatek.data.QueueSnapshot
 import com.aminopy.avatek.data.QueueStore
@@ -41,6 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
+data class LyricLine(val timeMs: Long, val text: String)
+
 enum class LibraryStatus { NeedsPermission, Scanning, Ready, Empty }
 enum class SortMode(val label: String) { Title("نام"), Artist("هنرمند"), Recent("جدیدترین"), Duration("مدت"), MostPlayed("پرشنیده") }
 
@@ -50,6 +54,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private val historyStore = HistoryStore(app)
     private val settingsStore = SettingsStore(app)
     private val queueStore = QueueStore(app)
+    private val lyricsStore = LyricsStore(app)
 
     // ---- library -------------------------------------------------------------------------------
     var status by mutableStateOf(LibraryStatus.NeedsPermission); private set
@@ -83,6 +88,8 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- extras --------------------------------------------------------------------------------
     var sleepRemainingMs by mutableStateOf<Long?>(null); private set
+    var lyrics by mutableStateOf<List<LyricLine>>(emptyList()); private set
+    var lyricsVisible by mutableStateOf(false); private set
     var eq by mutableStateOf(EqualizerInfo()); private set
     var toast by mutableStateOf<String?>(null); private set
     private var toastJob: Job? = null
@@ -100,6 +107,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             currentId = mediaItem?.mediaId?.toLongOrNull()
+            loadLyrics(currentId)
             syncQueue()
             if (mediaItem != null && reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
                 currentId?.let { recordPlay(it) }
@@ -140,6 +148,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
                 controller = c
                 c.addListener(listener)
                 currentId = c.currentMediaItem?.mediaId?.toLongOrNull()
+                loadLyrics(currentId)
                 isPlaying = c.isPlaying
                 repeatMode = c.repeatMode
                 shuffle = c.shuffleModeEnabled
@@ -424,6 +433,52 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         controller?.let { if (from in 0 until it.mediaItemCount && to in 0 until it.mediaItemCount) it.moveMediaItem(from, to) }
     }
     fun clearQueue() { controller?.let { it.stop(); it.clearMediaItems() }; queueStore.clear(); currentId = null; positionMs = 0L }
+
+    // ---- offline synced lyrics ----------------------------------------------------------------
+    fun toggleLyrics() {
+        lyricsVisible = !lyricsVisible
+        if (lyricsVisible && lyrics.isEmpty()) loadLyrics(currentId)
+    }
+
+    fun importLyrics(uri: Uri) {
+        val id = currentId
+        if (id == null) { showToast("ابتدا یک آهنگ پخش کن"); return }
+        val raw = runCatching {
+            getApplication<Application>().contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+        }.getOrNull()?.take(LyricsStore.MAX_LRC_CHARS).orEmpty()
+        val parsed = parseLrc(raw)
+        if (parsed.isEmpty()) { showToast("فایل LRC معتبر یا دارای زمان‌بندی نیست"); return }
+        lyricsStore.save(id, raw)
+        lyrics = parsed
+        lyricsVisible = true
+        showToast("متن آهنگ به‌صورت آفلاین ذخیره شد")
+    }
+
+    private fun loadLyrics(id: Long?) {
+        lyrics = id?.let { lyricsStore.load(it) }?.let(::parseLrc).orEmpty()
+    }
+
+    private fun parseLrc(raw: String): List<LyricLine> {
+        val timestamp = Regex("""\\[(\\d{1,2}):(\\d{2})(?:[.:](\\d{1,3}))?]""")
+        val offset = Regex("""\\[offset:([+-]?\\d+)]""").find(raw)?.groupValues?.getOrNull(1)?.toLongOrNull() ?: 0L
+        return raw.lineSequence().flatMap { line ->
+            val matches = timestamp.findAll(line).toList()
+            val text = timestamp.replace(line, "").trim()
+            if (matches.isEmpty() || text.isBlank()) emptySequence()
+            else matches.asSequence().mapNotNull { match ->
+                val minutes = match.groupValues[1].toLongOrNull() ?: return@mapNotNull null
+                val seconds = match.groupValues[2].toLongOrNull() ?: return@mapNotNull null
+                val fraction = match.groupValues.getOrNull(3).orEmpty().padEnd(3, '0').take(3).toLongOrNull() ?: 0L
+                LyricLine((minutes * 60_000L + seconds * 1_000L + fraction + offset).coerceAtLeast(0L), text)
+            }
+        }.sortedBy { it.timeMs }.toList()
+    }
+
+    val activeLyric: LyricLine? get() = lyrics.lastOrNull { it.timeMs <= positionMs }
+    val nextLyric: LyricLine? get() = activeLyric?.let { active ->
+        val index = lyrics.indexOf(active)
+        lyrics.getOrNull(index + 1)
+    } ?: lyrics.firstOrNull()
 
     // ---- sleep timer ---------------------------------------------------------------------------
     fun startSleepTimer(minutes: Int) = startSleep(minutes * 60_000L)
