@@ -22,7 +22,12 @@ sealed interface Sheet {
 }
 
 /** UI-level state shared across screens: navigation, full-screen player and overlay sheets. */
-class AppUi(val nav: Navigator, val requestLyricsImport: () -> Unit = {}) {
+class AppUi(
+    val nav: Navigator,
+    val requestLyricsImport: () -> Unit = {},
+    val requestBackupExport: () -> Unit = {},
+    val requestBackupImport: () -> Unit = {}
+) {
     var playerOpen by mutableStateOf(false); private set
     var sheet by mutableStateOf<Sheet?>(null); private set
 
