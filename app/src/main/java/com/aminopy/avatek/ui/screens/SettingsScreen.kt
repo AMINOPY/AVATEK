@@ -151,7 +151,14 @@ fun SettingsScreen(vm: AvatekViewModel, ui: AppUi) {
                     GlassChip("پاک‌کردن جست‌وجوها", false, { vm.clearSearches(); vm.showToast("جست‌وجوها پاک شد") })
                 }
             }
-            Section("درباره", 4) {
+            Section("پشتیبان‌گیری و بازیابی", 4) {
+                Text("تنظیمات، علاقه‌مندی‌ها، پلی‌لیست‌ها، تاریخچه، اکولایزر، صف پخش و متن‌های آفلاین در یک فایل محلی ذخیره می‌شوند. فایل‌های موسیقی کپی نمی‌شوند.", color = p.muted, fontSize = 12.sp, lineHeight = 18.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassChip("خروجی پشتیبان", false, { ui.requestBackupExport() })
+                    GlassChip("بازیابی پشتیبان", false, { ui.requestBackupImport() })
+                }
+            }
+            Section("درباره", 5) {
                 Row(
                     Modifier.fillMaxWidth().bounceClick(pressedScale = 0.97f) { ui.nav.push(Route.About) },
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
