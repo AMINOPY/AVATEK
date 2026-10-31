@@ -14,6 +14,7 @@ sealed interface Route {
     data object About : Route
     data object ListeningStats : Route
     data object SmartCrate : Route
+    data object Intelligence : Route
     data class Album(val key: String) : Route
     data class Artist(val name: String) : Route
     data class Playlist(val id: String) : Route
