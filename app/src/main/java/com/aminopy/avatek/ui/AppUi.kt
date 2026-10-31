@@ -26,7 +26,9 @@ class AppUi(
     val nav: Navigator,
     val requestLyricsImport: () -> Unit = {},
     val requestBackupExport: () -> Unit = {},
-    val requestBackupImport: () -> Unit = {}
+    val requestBackupImport: () -> Unit = {},
+    val requestNotificationPermission: () -> Unit = {},
+    val openNotificationSettings: () -> Unit = {}
 ) {
     var playerOpen by mutableStateOf(false); private set
     var drawerOpen by mutableStateOf(false); private set
@@ -35,6 +37,8 @@ class AppUi(
     fun openPlayer() { playerOpen = true }
     fun openDrawer() { drawerOpen = true }
     fun closeDrawer() { drawerOpen = false }
+    fun requestNotifications() = requestNotificationPermission()
+    fun manageNotifications() = openNotificationSettings()
     fun closePlayer() { playerOpen = false }
     fun show(s: Sheet) { sheet = s }
     fun dismissSheet() { sheet = null }
