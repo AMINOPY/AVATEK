@@ -159,7 +159,11 @@ class MusicPlaybackService : MediaSessionService() {
             var completed = false
             try {
                 while (isActive) {
-                    if (player !== active || active.currentMediaItemIndex != sourceIndex || !active.isPlaying || crossfadeDurationMs <= 0L) break
+                    val queueStillMatches = active.mediaItemCount == spare.mediaItemCount &&
+                        (0 until active.mediaItemCount).all { active.getMediaItemAt(it).mediaId == spare.getMediaItemAt(it).mediaId }
+                    if (player !== active || active.currentMediaItemIndex != sourceIndex || !active.isPlaying ||
+                        active.shuffleModeEnabled || active.repeatMode == Player.REPEAT_MODE_ONE ||
+                        !queueStillMatches || crossfadeDurationMs <= 0L) break
                     val fraction = ((SystemClock.elapsedRealtime() - startedAt).toFloat() /
                         crossfadeDurationMs.coerceAtLeast(1L)).coerceIn(0f, 1f)
                     active.volume = 1f - fraction
