@@ -11,6 +11,7 @@ object AvatekCommands {
     const val BASS = "avatek.eq.bass"
     const val VIRTUALIZER = "avatek.eq.virtualizer"
     const val EQ_RESET = "avatek.eq.reset"
+    const val LOUDNESS = "avatek.eq.loudness"
 
     const val KEY_ENABLED = "enabled"
     const val KEY_BAND = "band"
@@ -24,8 +25,11 @@ object AvatekCommands {
     const val KEY_BASS = "bass"
     const val KEY_VIRT = "virt"
     const val KEY_AVAILABLE = "available"
+    const val KEY_LOUDNESS = "loudness"
+    const val KEY_LOUDNESS_ENABLED = "loudness_enabled"
+    const val KEY_GAIN = "gain"
 
-    val all: List<SessionCommand> = listOf(EQ_INFO, EQ_ENABLED, EQ_BAND, BASS, VIRTUALIZER, EQ_RESET)
+    val all: List<SessionCommand> = listOf(EQ_INFO, EQ_ENABLED, EQ_BAND, BASS, VIRTUALIZER, LOUDNESS, EQ_RESET)
         .map { SessionCommand(it, Bundle.EMPTY) }
 }
 
@@ -38,5 +42,7 @@ data class EqualizerInfo(
     val centerFreqsHz: List<Int> = emptyList(),
     val levels: List<Int> = emptyList(),
     val bass: Int = 0,
-    val virtualizer: Int = 0
+    val virtualizer: Int = 0,
+    val loudness: Int = 0,
+    val loudnessEnabled: Boolean = false
 )
