@@ -17,7 +17,9 @@ AVATEK is a Persian-first, offline music player for Android with a premium black
 ### Home and discovery
 - Local daily mix ranked using favorites, play counts, recency and recently added tracks.
 - Discovery mix for less-played and recently added music.
-- Listening insights: total plays, unique tracks heard, favorites and most-played track.
+- Echo Radio: a local station seeded from the current track, matching genre, artist and album.
+- Smart Crate: dynamic offline collections for favorites, unplayed tracks, recent additions, most-played tracks and rediscovery.
+- Listening insights: total play starts, unique tracks heard, favorites, top artists, most-played tracks and recent history.
 
 ### Music library
 - Songs, albums, artists, folders, genres and playlists.
@@ -58,7 +60,7 @@ GitHub Actions runs:
 
     gradle --no-daemon --continue --console=plain :app:testDebugUnitTest :app:assembleDebug
 
-Unit tests cover LRC timestamp parsing, multiple timestamps, offsets and metadata filtering. Review the latest Actions run on foundation/ui-redesign for the authoritative build and APK artifact status.
+Unit tests cover LRC timestamp parsing, multiple timestamps, offsets and metadata filtering. Smart Crate collections are calculated on demand from the local library and listening history. Review the latest Actions run on foundation/ui-redesign for the authoritative build and APK artifact status. Real-device checks are still required for notifications, Bluetooth/headset controls, audio focus, MediaStore differences and backup/restore.
 
 ## Development policy
 
