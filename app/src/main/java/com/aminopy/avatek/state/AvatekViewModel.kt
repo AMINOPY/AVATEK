@@ -231,7 +231,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
             val playBoost = ((playCounts[track.id] ?: 0).coerceAtMost(30)) * 2.2
             val recentBoost = recentRank[track.id]?.let { (24 - it).coerceAtLeast(0) * 0.8 } ?: 0.0
             val addedDays = if (track.dateAddedSec > 0L) daySeed - track.dateAddedSec / 86_400L else Long.MAX_VALUE
-            val freshBoost = if (addedDays in 0..14) (14 - addedDays) * 0.7 else 0.0
+            val freshBoost = if (addedDays in 0L..14L) (14 - addedDays) * 0.7 else 0.0
             val dailyVariation = Random(daySeed + track.id).nextDouble() * 5.0
             favoriteBoost + playBoost + recentBoost + freshBoost + dailyVariation
         }.take(limit.coerceAtLeast(1))
