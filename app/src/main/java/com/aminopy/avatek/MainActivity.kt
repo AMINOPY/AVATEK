@@ -2,6 +2,8 @@ package com.aminopy.avatek
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.provider.Settings
 import android.os.Build
 import android.os.Bundle
 import android.net.Uri
@@ -33,10 +35,24 @@ class MainActivity : ComponentActivity() {
         vm.onPermissionResult(results[audioPermission()] == true || hasAudioPermission())
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { AvatekApp(vm, requestPermission = ::requestPermissions, requestLyricsImport = ::requestLyricsImport, requestBackupExport = ::requestBackupExport, requestBackupImport = ::requestBackupImport) }
+        setContent {
+            AvatekApp(
+                vm,
+                requestPermission = ::requestPermissions,
+                requestLyricsImport = ::requestLyricsImport,
+                requestBackupExport = ::requestBackupExport,
+                requestBackupImport = ::requestBackupImport,
+                requestNotificationPermission = ::requestNotificationPermission,
+                openNotificationSettings = ::openNotificationSettings
+            )
+        }
         if (savedInstanceState == null && hasAudioPermission()) vm.scan()
     }
 
@@ -50,6 +66,21 @@ class MainActivity : ComponentActivity() {
     private fun requestLyricsImport() { lyricsLauncher.launch(arrayOf("text/*", "application/x-lrc")) }
     private fun requestBackupExport() { backupExportLauncher.launch("AVATEK-backup.json") }
     private fun requestBackupImport() { backupImportLauncher.launch(arrayOf("application/json", "text/*")) }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else openNotificationSettings()
+        } else openNotificationSettings()
+    }
+
+    private fun openNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        }
+        runCatching { startActivity(intent) }
+    }
 
     private fun requestPermissions() {
         val wanted = buildList {
