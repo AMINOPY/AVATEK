@@ -58,6 +58,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.OutlinedTextField
 
 private val Presets = listOf(
     "تخت" to listOf(0f, 0f, 0f, 0f, 0f),
@@ -78,6 +79,7 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
     val eq = vm.eq
     var confirmReset by remember { mutableStateOf(false) }
     var selectedPreset by remember { mutableStateOf("تخت") }
+    var profileName by remember { mutableStateOf("") }
     LaunchedEffect(vm.engineReady) { if (vm.engineReady) vm.refreshEqualizer() }
 
     if (confirmReset) {
@@ -99,7 +101,7 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("اکولایزر", color = p.text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        Text("Audio Lab Pro · اکولایزر", color = p.text, fontSize = 18.sp, fontWeight = FontWeight.Black)
                         Text(if (eq.available) "موتور افکت متصل · تغییرات روی خروجی پخش اعمال می‌شوند" else "برای فعال‌شدن افکت‌ها ابتدا یک آهنگ پخش کن", color = p.muted, fontSize = 11.sp)
                     }
                     Switch(
@@ -126,6 +128,29 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
                             })
                         }
                     }
+
+                    if (vm.eqProfiles.isNotEmpty()) {
+                        Text("پروفایل‌های ذخیره‌شده", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            vm.eqProfiles.forEach { name ->
+                                GlassChip(name, false, { vm.applyEqProfile(name) })
+                                GlassChip("حذف $name", false, { vm.deleteEqProfile(name) })
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = profileName,
+                            onValueChange = { profileName = it.take(32) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            label = { Text("نام پروفایل") }
+                        )
+                        GlassChip("ذخیره", false, {
+                            vm.saveEqProfile(profileName)
+                            profileName = ""
+                        })
+                    }
                     Row(Modifier.fillMaxWidth().height(190.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                         eq.levels.forEachIndexed { i, level ->
                             EqBand(
@@ -147,6 +172,11 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.CenterStart) {
                     GlassChip("بازنشانی کامل موتور صدا", false, { confirmReset = true })
                 }
+            }
+
+            Column(Modifier.fillMaxWidth().glass(RoundedCornerShape(30.dp), strength = 0.55f).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("انتقال بین آهنگ‌ها", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text("پخش فهرستی Media3 انتقال استاندارد را مدیریت می‌کند. Crossfade هم‌پوشانِ دو منبع صوتی هنوز در موتور پخش فعال نشده و تا زمان پیاده‌سازی دوپلیره، گزینه‌ی ساختگی نمایش داده نمی‌شود.", color = p.muted, fontSize = 11.sp)
             }
             // speed
             Column(Modifier.fillMaxWidth().staggerIn(2).glass(RoundedCornerShape(30.dp), strength = 0.6f).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
