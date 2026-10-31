@@ -20,6 +20,12 @@ class MainActivity : ComponentActivity() {
     private val lyricsLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) vm.importLyrics(uri)
     }
+    private val backupExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        if (uri != null) vm.writeBackup(uri)
+    }
+    private val backupImportLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) vm.readBackup(uri)
+    }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -30,7 +36,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { AvatekApp(vm, requestPermission = ::requestPermissions, requestLyricsImport = ::requestLyricsImport) }
+        setContent { AvatekApp(vm, requestPermission = ::requestPermissions, requestLyricsImport = ::requestLyricsImport, requestBackupExport = ::requestBackupExport, requestBackupImport = ::requestBackupImport) }
         if (savedInstanceState == null && hasAudioPermission()) vm.scan()
     }
 
@@ -42,6 +48,8 @@ class MainActivity : ComponentActivity() {
         ContextCompat.checkSelfPermission(this, audioPermission()) == PackageManager.PERMISSION_GRANTED
 
     private fun requestLyricsImport() { lyricsLauncher.launch(arrayOf("text/*", "application/x-lrc")) }
+    private fun requestBackupExport() { backupExportLauncher.launch("AVATEK-backup.json") }
+    private fun requestBackupImport() { backupImportLauncher.launch(arrayOf("application/json", "text/*")) }
 
     private fun requestPermissions() {
         if (hasAudioPermission()) { vm.scan(); return }
