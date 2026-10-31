@@ -550,7 +550,10 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         recentSearches = historyStore.loadSearches()
         settings = settingsStore.load()
         queueRestored = false
-        loadLyrics(currentId)
+        controller?.let { it.stop(); it.clearMediaItems() }
+        currentId = null
+        positionMs = 0L
+        loadLyrics(null)
         restoreQueueIfReady()
         if (status != LibraryStatus.NeedsPermission) scan()
         refreshEqualizer()
