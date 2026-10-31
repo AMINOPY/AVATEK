@@ -24,6 +24,7 @@ import com.aminopy.avatek.data.AudioLibraryRepository
 import com.aminopy.avatek.data.AudioPlaylist
 import com.aminopy.avatek.data.AudioTrack
 import com.aminopy.avatek.data.FavoriteStore
+import com.aminopy.avatek.data.EqualizerProfileStore
 import com.aminopy.avatek.data.HistoryStore
 import com.aminopy.avatek.data.LyricsStore
 import com.aminopy.avatek.data.PlaylistStore
@@ -57,6 +58,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private val queueStore = QueueStore(app)
     private val lyricsStore = LyricsStore(app)
     private val backupStore = BackupStore(app)
+    private val equalizerProfileStore = EqualizerProfileStore(app)
 
     // ---- library -------------------------------------------------------------------------------
     var status by mutableStateOf(LibraryStatus.NeedsPermission); private set
@@ -93,6 +95,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     var lyrics by mutableStateOf<List<LyricLine>>(emptyList()); private set
     var lyricsVisible by mutableStateOf(false); private set
     var eq by mutableStateOf(EqualizerInfo()); private set
+    var eqProfiles by mutableStateOf(equalizerProfileStore.names()); private set
     var toast by mutableStateOf<String?>(null); private set
     private var toastJob: Job? = null
     private var sleepJob: Job? = null
@@ -566,6 +569,37 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshEqualizer() = sendEq(AvatekCommands.EQ_INFO)
+
+    fun saveEqProfile(name: String) {
+        if (!eq.available || eq.levels.isEmpty()) {
+            showToast("برای ذخیره‌ی پروفایل ابتدا یک آهنگ پخش کن")
+            return
+        }
+        if (equalizerProfileStore.save(name, eq.levels)) {
+            eqProfiles = equalizerProfileStore.names()
+            showToast("پروفایل اکولایزر ذخیره شد")
+        } else showToast("نام پروفایل معتبر نیست")
+    }
+
+    fun applyEqProfile(name: String) {
+        val levels = equalizerProfileStore.load(name)
+        if (levels == null || !eq.available) {
+            showToast("پروفایل قابل اعمال نیست")
+            return
+        }
+        levels.take(eq.levels.size).forEachIndexed { index, level ->
+            setEqBand(index, level.coerceIn(eq.minLevel, eq.maxLevel))
+        }
+        setEqEnabled(true)
+        showToast("پروفایل «$name» اعمال شد")
+    }
+
+    fun deleteEqProfile(name: String) {
+        equalizerProfileStore.delete(name)
+        eqProfiles = equalizerProfileStore.names()
+        showToast("پروفایل حذف شد")
+    }
+
     fun setEqEnabled(enabled: Boolean) = sendEq(AvatekCommands.EQ_ENABLED, Bundle().apply { putBoolean(AvatekCommands.KEY_ENABLED, enabled) })
     fun setEqBand(band: Int, level: Int) = sendEq(AvatekCommands.EQ_BAND, Bundle().apply {
         putInt(AvatekCommands.KEY_BAND, band); putInt(AvatekCommands.KEY_LEVEL, level)
