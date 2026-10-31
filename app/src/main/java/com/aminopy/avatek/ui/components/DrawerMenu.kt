@@ -104,7 +104,7 @@ fun AvatekDrawer(vm: AvatekViewModel, ui: AppUi) {
                     DrawerItem(Icons.Rounded.Shuffle, "Discovery Mix", "کشف آهنگ‌های کمتر شنیده‌شده", p.accent) {
                         ui.closeDrawer(); vm.playList(vm.discoveryMix(40)); ui.openPlayer()
                     }
-                    DrawerItem(Icons.Rounded.History, "نبض شنیدن", "آمار و تاریخچه‌ی پخش", p.accent) { go(ui, Route.Home) }
+                    DrawerItem(Icons.Rounded.History, "نبض شنیدن", "آمار و تاریخچه‌ی پخش", p.accent) { go(ui, Route.ListeningStats) }
                     Spacer(Modifier.height(8.dp))
                     DrawerSection("ابزارها")
                     DrawerItem(Icons.Rounded.Equalizer, "Audio Lab", "اکولایزر، بیس و افکت‌های صدا", p.accent) { go(ui, Route.Lab) }
@@ -122,7 +122,7 @@ fun AvatekDrawer(vm: AvatekViewModel, ui: AppUi) {
 
 private fun go(ui: AppUi, route: Route) {
     ui.closeDrawer()
-    if (route == Route.Favorites) ui.nav.push(route) else ui.nav.selectTab(route)
+    if (route in listOf(Route.Favorites, Route.ListeningStats)) ui.nav.push(route) else ui.nav.selectTab(route)
 }
 
 @Composable
