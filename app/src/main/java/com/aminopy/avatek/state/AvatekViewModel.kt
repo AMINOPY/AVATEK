@@ -295,6 +295,24 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     fun recentlyPlayed(limit: Int = 12): List<AudioTrack> = recentIds.mapNotNull { byId[it] }.take(limit)
     fun recentlyAdded(limit: Int = 12): List<AudioTrack> = tracks.sortedByDescending { it.dateAddedSec }.take(limit)
 
+    /** Dynamic offline collections derived from the current library and local listening history. */
+    fun smartCrate(kind: String, limit: Int = 100): List<AudioTrack> {
+        val safeLimit = limit.coerceIn(1, 500)
+        val result = when (kind) {
+            "favorites" -> tracks.filter { it.id in favorites }
+                .sortedWith(compareByDescending<AudioTrack> { playCounts[it.id] ?: 0 }.thenBy { it.title.lowercase() })
+            "unplayed" -> tracks.filter { (playCounts[it.id] ?: 0) == 0 }
+                .sortedWith(compareByDescending<AudioTrack> { it.dateAddedSec }.thenBy { it.title.lowercase() })
+            "recent" -> tracks.sortedByDescending { it.dateAddedSec }
+            "most_played" -> tracks.filter { (playCounts[it.id] ?: 0) > 0 }
+                .sortedWith(compareByDescending<AudioTrack> { playCounts[it.id] ?: 0 }.thenBy { it.title.lowercase() })
+            "rediscover" -> tracks.filter { (playCounts[it.id] ?: 0) in 1..2 && it.id !in recentIds.take(8) }
+                .sortedWith(compareBy<AudioTrack> { playCounts[it.id] ?: 0 }.thenByDescending { it.dateAddedSec })
+            else -> emptyList()
+        }
+        return result.take(safeLimit)
+    }
+
     /**
      * Local-first daily mix. It favors liked and frequently played tracks while gently
      * resurfacing recent listening; a day-based seed keeps the order stable for the day.
