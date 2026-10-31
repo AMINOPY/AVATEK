@@ -10,7 +10,9 @@ data class AudioTrack(
     val durationMs: Long,
     val uri: Uri,
     val albumId: Long = 0L,
-    val dateAddedSec: Long = 0L
+    val dateAddedSec: Long = 0L,
+    val folderPath: String = "Music",
+    val genre: String = "نامشخص"
 ) {
     /** Stable key used to group tracks into albums (album + artist). */
     val albumKey: String get() = "$album\u0000$artist"
