@@ -6,6 +6,7 @@ import android.media.audiofx.Equalizer
 import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.Virtualizer
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
@@ -20,6 +21,13 @@ import androidx.media3.session.SessionCommands
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Owns the playback engine and the audio-effects chain (equalizer, bass boost, virtualizer)
@@ -30,6 +38,10 @@ import com.google.common.util.concurrent.ListenableFuture
 class MusicPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
+    private var standbyPlayer: ExoPlayer? = null
+    private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var crossfadeDurationMs = 0L
+    private var crossfading = false
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
@@ -54,34 +66,131 @@ class MusicPlaybackService : MediaSessionService() {
                 .setAudioProcessors(arrayOf(AnalyzerProcessor()))
                 .build()
         }
-        val exo = ExoPlayer.Builder(this, renderers)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                true
-            )
-            .setHandleAudioBecomingNoisy(true)
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
+        fun buildPlayer(handleAudioFocus: Boolean): ExoPlayer = ExoPlayer.Builder(this, renderers)
+            .setAudioAttributes(audioAttributes, handleAudioFocus)
+            .setHandleAudioBecomingNoisy(handleAudioFocus)
+            .build()
+        val exo = buildPlayer(true)
+        val spare = buildPlayer(false).apply { volume = 0f }
         exo.addListener(sessionListener)
         player = exo
+        standbyPlayer = spare
+        crossfadeDurationMs = getSharedPreferences("avatek_playback", Context.MODE_PRIVATE)
+            .getLong("crossfade_ms", 0L).coerceIn(0L, 12_000L)
         mediaSession = MediaSession.Builder(this, exo).setCallback(EffectsCallback()).build()
         attachEffects(exo.audioSessionId)
+        engineScope.launch {
+            while (isActive) {
+                updateCrossfade()
+                delay(100L)
+            }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onDestroy() {
+        engineScope.cancel()
         releaseEffects()
         player?.removeListener(sessionListener)
-        mediaSession?.run {
-            player.release()
-            release()
-        }
+        mediaSession?.release()
         mediaSession = null
+        player?.release()
+        standbyPlayer?.release()
         player = null
+        standbyPlayer = null
         super.onDestroy()
+    }
+
+
+    // ---- dual-player crossfade ----------------------------------------------------------------
+
+    private fun prepareStandby(active: ExoPlayer, spare: ExoPlayer) {
+        if (crossfading || active.mediaItemCount < 2 || active.shuffleModeEnabled ||
+            active.repeatMode == Player.REPEAT_MODE_ONE) return
+        var next = active.nextMediaItemIndex
+        if (next == C.INDEX_UNSET && active.repeatMode == Player.REPEAT_MODE_ALL) next = 0
+        if (next !in 0 until active.mediaItemCount) return
+        val target = active.getMediaItemAt(next)
+        if (spare.currentMediaItem?.mediaId == target.mediaId &&
+            spare.playbackState != Player.STATE_IDLE && spare.playbackState != Player.STATE_ENDED) return
+        spare.pause()
+        spare.volume = 0f
+        val items = (0 until active.mediaItemCount).map(active::getMediaItemAt)
+        spare.setMediaItems(items, next, 0L)
+        spare.repeatMode = active.repeatMode
+        spare.shuffleModeEnabled = false
+        spare.prepare()
+    }
+
+    private fun updateCrossfade() {
+        val active = player ?: return
+        val spare = standbyPlayer ?: return
+        if (crossfadeDurationMs <= 0L || !active.isPlaying || active.shuffleModeEnabled ||
+            active.repeatMode == Player.REPEAT_MODE_ONE || active.mediaItemCount < 2) return
+        val duration = active.duration
+        if (duration <= 0L || duration == C.TIME_UNSET) return
+        val remaining = duration - active.currentPosition
+        if (remaining <= crossfadeDurationMs + 4_000L && !crossfading) prepareStandby(active, spare)
+        if (!crossfading && remaining in 1..crossfadeDurationMs &&
+            spare.playbackState == Player.STATE_READY) {
+            beginCrossfade(active, spare, active.nextMediaItemIndex)
+        }
+    }
+
+    private fun beginCrossfade(active: ExoPlayer, spare: ExoPlayer, targetIndex: Int) {
+        if (crossfading || targetIndex !in 0 until active.mediaItemCount) return
+        crossfading = true
+        val sourceIndex = active.currentMediaItemIndex
+        spare.seekTo(targetIndex, 0L)
+        spare.volume = 0f
+        spare.play()
+        engineScope.launch {
+            val startedAt = SystemClock.elapsedRealtime()
+            var completed = false
+            try {
+                while (isActive) {
+                    if (player !== active || active.currentMediaItemIndex != sourceIndex || !active.isPlaying) break
+                    val fraction = ((SystemClock.elapsedRealtime() - startedAt).toFloat() /
+                        crossfadeDurationMs.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                    active.volume = 1f - fraction
+                    spare.volume = fraction
+                    if (fraction >= 1f) { completed = true; break }
+                    delay(30L)
+                }
+                if (completed && player === active && active.currentMediaItemIndex == sourceIndex) {
+                    spare.volume = 1f
+                    active.pause()
+                    mediaSession?.setPlayer(spare)
+                    active.removeListener(sessionListener)
+                    spare.addListener(sessionListener)
+                    player = spare
+                    standbyPlayer = active
+                    active.volume = 0f
+                    attachEffects(spare.audioSessionId)
+                }
+            } finally {
+                crossfading = false
+                if (player === active) {
+                    spare.pause()
+                    spare.volume = 0f
+                }
+            }
+        }
+    }
+
+    private fun setCrossfadeDuration(value: Long) {
+        crossfadeDurationMs = value.coerceIn(0L, 12_000L)
+        getSharedPreferences("avatek_playback", Context.MODE_PRIVATE).edit()
+            .putLong("crossfade_ms", crossfadeDurationMs).apply()
+        if (crossfadeDurationMs == 0L) {
+            standbyPlayer?.pause()
+            standbyPlayer?.volume = 0f
+        }
     }
 
     // ---- audio effects ------------------------------------------------------------------------
@@ -144,6 +253,7 @@ class MusicPlaybackService : MediaSessionService() {
         out.putInt(AvatekCommands.KEY_VIRT, prefs.getInt("virt", 0))
         out.putInt(AvatekCommands.KEY_LOUDNESS, prefs.getInt("loudness", 0))
         out.putBoolean(AvatekCommands.KEY_LOUDNESS_ENABLED, prefs.getBoolean("loudness_enabled", false))
+        out.putLong(AvatekCommands.KEY_CROSSFADE_MS, crossfadeDurationMs)
         if (eq != null) {
             val bands = eq.numberOfBands.toInt()
             out.putInt(AvatekCommands.KEY_BANDS, bands)
@@ -230,6 +340,7 @@ class MusicPlaybackService : MediaSessionService() {
                     runCatching { virtualizer?.enabled = false }
                     runCatching { loudnessEnhancer?.setTargetGain(0); loudnessEnhancer?.enabled = false }
                 }
+                AvatekCommands.CROSSFADE -> setCrossfadeDuration(args.getLong(AvatekCommands.KEY_CROSSFADE_MS))
                 AvatekCommands.EQ_INFO -> Unit
                 else -> return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
             }
