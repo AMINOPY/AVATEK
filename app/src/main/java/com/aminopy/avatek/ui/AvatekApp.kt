@@ -54,6 +54,7 @@ import com.aminopy.avatek.ui.screens.LabScreen
 import com.aminopy.avatek.ui.screens.LibraryScreen
 import com.aminopy.avatek.ui.screens.ListeningStatsScreen
 import com.aminopy.avatek.ui.screens.SmartCrateScreen
+import com.aminopy.avatek.ui.screens.IntelligenceScreen
 import com.aminopy.avatek.ui.screens.NowPlayingScreen
 import com.aminopy.avatek.ui.screens.PlaylistScreen
 import com.aminopy.avatek.ui.screens.SearchScreen
@@ -128,6 +129,7 @@ fun AvatekApp(
                             Route.About -> AboutScreen(vm, ui)
                             Route.ListeningStats -> ListeningStatsScreen(vm, ui)
                             Route.SmartCrate -> SmartCrateScreen(vm, ui)
+                            Route.Intelligence -> IntelligenceScreen(vm, ui)
                             is Route.Album -> AlbumScreen(vm, ui, route.key)
                             is Route.Artist -> ArtistScreen(vm, ui, route.name)
                             is Route.Playlist -> PlaylistScreen(vm, ui, route.id)
