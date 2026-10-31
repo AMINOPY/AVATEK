@@ -459,8 +459,8 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun parseLrc(raw: String): List<LyricLine> {
-        val timestamp = Regex("""\\[(\\d{1,2}):(\\d{2})(?:[.:](\\d{1,3}))?]""")
-        val offset = Regex("""\\[offset:([+-]?\\d+)]""").find(raw)?.groupValues?.getOrNull(1)?.toLongOrNull() ?: 0L
+        val timestamp = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
+        val offset = Regex("""\[offset:([+-]?\d+)]""").find(raw)?.groupValues?.getOrNull(1)?.toLongOrNull() ?: 0L
         return raw.lineSequence().flatMap { line ->
             val matches = timestamp.findAll(line).toList()
             val text = timestamp.replace(line, "").trim()
