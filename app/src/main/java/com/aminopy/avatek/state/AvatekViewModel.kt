@@ -538,7 +538,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     fun readBackup(uri: Uri) {
         val raw = runCatching {
             getApplication<Application>().contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
-        }.getOrNull()?.takeIf { it.length <= 2_000_000 }
+        }.getOrNull()?.takeIf { it.length <= 20_000_000 }
         if (raw == null || !backupStore.importJson(raw)) {
             showToast("فایل پشتیبان معتبر نیست")
             return
