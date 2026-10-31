@@ -38,11 +38,24 @@ jobs:
         with:
           gradle-version: "8.14.3"
 
-      - name: Run unit tests
-        run: gradle --no-daemon :app:testDebugUnitTest
+      - name: Build and test
+        run: |
+          set -o pipefail
+          gradle --no-daemon --continue --console=plain :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
 
-      - name: Compile debug APK
-        run: gradle --no-daemon :app:assembleDebug
+      - name: Report compiler errors as annotations
+        if: failure()
+        run: |
+          {
+            grep -E "^e: |^w: .*(deprecat|Unresolved)|error:|FAILED|What went wrong|Execution failed|Unresolved reference|Caused by" build.log | head -150
+          } > errors.txt || true
+          MSG=$(python3 - <<'PY'
+          import urllib.parse
+          t = open("errors.txt").read()[:60000] or "no matching lines; tail:\n" + "".join(open("build.log").readlines()[-60:])
+          print(t.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))
+          PY
+          )
+          echo "::error title=Gradle errors::${MSG}"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

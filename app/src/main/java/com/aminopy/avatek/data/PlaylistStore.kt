@@ -76,6 +76,17 @@ class PlaylistStore(context: Context) {
     }
 
     @Synchronized
+    fun renamePlaylist(playlistId: String, name: String): Boolean {
+        val cleanName = name.trim().replace(Regex("\\s+"), " ")
+        if (cleanName.isBlank()) return false
+        val playlists = loadPlaylists()
+        if (playlists.none { it.id == playlistId }) return false
+        if (playlists.any { it.id != playlistId && it.name.equals(cleanName, ignoreCase = true) }) return false
+        persist(playlists.map { if (it.id == playlistId) it.copy(name = cleanName) else it })
+        return true
+    }
+
+    @Synchronized
     fun deletePlaylist(playlistId: String): Boolean {
         val playlists = loadPlaylists()
         if (playlists.none { it.id == playlistId }) return false
