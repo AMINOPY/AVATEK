@@ -3,6 +3,7 @@ package com.aminopy.avatek.playback
 import android.content.Context
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
+import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.Virtualizer
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
@@ -32,6 +33,7 @@ class MusicPlaybackService : MediaSessionService() {
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
+    private var loudnessEnhancer: LoudnessEnhancer? = null
     private val prefs by lazy { getSharedPreferences("avatek_eq", Context.MODE_PRIVATE) }
 
     private val sessionListener = object : Player.Listener {
@@ -88,7 +90,8 @@ class MusicPlaybackService : MediaSessionService() {
         runCatching { equalizer?.release() }
         runCatching { bassBoost?.release() }
         runCatching { virtualizer?.release() }
-        equalizer = null; bassBoost = null; virtualizer = null
+        runCatching { loudnessEnhancer?.release() }
+        equalizer = null; bassBoost = null; virtualizer = null; loudnessEnhancer = null
     }
 
     private fun attachEffects(sessionId: Int) {
@@ -114,6 +117,12 @@ class MusicPlaybackService : MediaSessionService() {
                 v.enabled = prefs.getBoolean("enabled", false)
             }
         }
+        loudnessEnhancer = runCatching { LoudnessEnhancer(sessionId) }.getOrNull()?.also { enhancer ->
+            runCatching {
+                enhancer.setTargetGain(prefs.getInt("loudness", 0))
+                enhancer.enabled = prefs.getBoolean("loudness_enabled", false)
+            }
+        }
     }
 
     private fun savedLevels(): List<Int> =
@@ -133,6 +142,8 @@ class MusicPlaybackService : MediaSessionService() {
         out.putBoolean(AvatekCommands.KEY_ENABLED, prefs.getBoolean("enabled", false))
         out.putInt(AvatekCommands.KEY_BASS, prefs.getInt("bass", 0))
         out.putInt(AvatekCommands.KEY_VIRT, prefs.getInt("virt", 0))
+        out.putInt(AvatekCommands.KEY_LOUDNESS, prefs.getInt("loudness", 0))
+        out.putBoolean(AvatekCommands.KEY_LOUDNESS_ENABLED, prefs.getBoolean("loudness_enabled", false))
         if (eq != null) {
             val bands = eq.numberOfBands.toInt()
             out.putInt(AvatekCommands.KEY_BANDS, bands)
@@ -196,14 +207,28 @@ class MusicPlaybackService : MediaSessionService() {
                     prefs.edit().putInt("virt", strength).apply()
                     runCatching { if (virtualizer?.strengthSupported == true) virtualizer?.setStrength(strength.toShort()) }
                 }
+                AvatekCommands.LOUDNESS -> {
+                    val gain = args.getInt(AvatekCommands.KEY_GAIN).coerceIn(0, 1000)
+                    prefs.edit().putInt("loudness", gain).putBoolean("loudness_enabled", gain > 0).apply()
+                    runCatching {
+                        loudnessEnhancer?.setTargetGain(gain)
+                        loudnessEnhancer?.enabled = gain > 0
+                    }
+                }
                 AvatekCommands.EQ_RESET -> {
                     val eq = equalizer
                     if (eq != null) for (b in 0 until eq.numberOfBands) {
                         runCatching { eq.setBandLevel(b.toShort(), 0) }
                     }
-                    prefs.edit().putString("levels", "").putInt("bass", 0).putInt("virt", 0).apply()
+                    prefs.edit().putString("levels", "").putInt("bass", 0).putInt("virt", 0)
+                        .putInt("loudness", 0).putBoolean("loudness_enabled", false)
+                        .putBoolean("enabled", false).apply()
                     runCatching { if (bassBoost?.strengthSupported == true) bassBoost?.setStrength(0) }
                     runCatching { if (virtualizer?.strengthSupported == true) virtualizer?.setStrength(0) }
+                    runCatching { equalizer?.enabled = false }
+                    runCatching { bassBoost?.enabled = false }
+                    runCatching { virtualizer?.enabled = false }
+                    runCatching { loudnessEnhancer?.setTargetGain(0); loudnessEnhancer?.enabled = false }
                 }
                 AvatekCommands.EQ_INFO -> Unit
                 else -> return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
