@@ -118,12 +118,15 @@ class MusicPlaybackService : MediaSessionService() {
         if (next == C.INDEX_UNSET && active.repeatMode == Player.REPEAT_MODE_ALL) next = 0
         if (next !in 0 until active.mediaItemCount) return
         val target = active.getMediaItemAt(next)
-        if (spare.currentMediaItem?.mediaId == target.mediaId &&
+        val playlistMatches = spare.mediaItemCount == active.mediaItemCount &&
+            (0 until active.mediaItemCount).all { spare.getMediaItemAt(it).mediaId == active.getMediaItemAt(it).mediaId }
+        if (playlistMatches && spare.currentMediaItem?.mediaId == target.mediaId &&
             spare.playbackState != Player.STATE_IDLE && spare.playbackState != Player.STATE_ENDED) return
         spare.pause()
         spare.volume = 0f
         val items = (0 until active.mediaItemCount).map(active::getMediaItemAt)
         spare.setMediaItems(items, next, 0L)
+        spare.playbackParameters = active.playbackParameters
         spare.repeatMode = active.repeatMode
         spare.shuffleModeEnabled = false
         spare.prepare()
