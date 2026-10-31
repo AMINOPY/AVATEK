@@ -323,6 +323,33 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         ).take(limit.coerceAtLeast(1))
     }
 
+    /**
+     * Echo Radio builds an offline, seed-based station around the current track.
+     * It prefers matching genre/artist/album, avoids the most recent tracks when
+     * there are enough alternatives, and gently mixes in favorites and discoveries.
+     */
+    fun echoRadio(limit: Int = 30): List<AudioTrack> {
+        if (tracks.isEmpty()) return emptyList()
+        val seed = currentTrack
+        val recentSet = recentIds.take(8).toSet()
+        val pool = tracks.filter { it.id != seed?.id }
+        if (pool.isEmpty()) return emptyList()
+        val freshPool = pool.filterNot { it.id in recentSet }.ifEmpty { pool }
+        return freshPool.sortedByDescending { track ->
+            val genreMatch = seed?.genre?.takeIf { it != "نامشخص" && it.isNotBlank() } == track.genre
+            val artistMatch = seed?.artist?.equals(track.artist, ignoreCase = true) == true
+            val albumMatch = seed?.albumKey == track.albumKey
+            val favoriteBoost = if (track.id in favorites) 7.0 else 0.0
+            val discoveryBoost = if ((playCounts[track.id] ?: 0) == 0) 4.0 else 0.0
+            val recencyPenalty = if (track.id in recentSet) 8.0 else 0.0
+            val stableVariation = Random((System.currentTimeMillis() / 86_400_000L) + track.id).nextDouble() * 2.5
+            (if (genreMatch) 18.0 else 0.0) +
+                (if (artistMatch) 12.0 else 0.0) +
+                (if (albumMatch) 8.0 else 0.0) +
+                favoriteBoost + discoveryBoost - recencyPenalty + stableVariation
+        }.take(limit.coerceAtLeast(1))
+    }
+
     private fun recordPlay(id: Long) {
         playCounts = playCounts + (id to ((playCounts[id] ?: 0) + 1))
         recentIds = (listOf(id) + recentIds.filter { it != id }).take(HistoryStore.MAX_RECENT)
