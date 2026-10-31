@@ -198,8 +198,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         val saved = queueStore.load() ?: return
         val available = saved.trackIds.mapNotNull { id -> byId[id] }
         if (available.isEmpty()) { queueStore.clear(); return }
-        val savedCurrentId = saved.trackIds.getOrNull(saved.currentIndex)
-        val restoredIndex = available.indexOfFirst { it.id == savedCurrentId }.let { if (it >= 0) it else 0 }
+        val restoredIndex = saved.trackIds.take(saved.currentIndex).count { it in byId }.coerceIn(0, available.lastIndex)
         val restoredPosition = saved.positionMs.coerceAtMost(available[restoredIndex].durationMs.coerceAtLeast(0L))
         restoredTrackIdToIgnore = available[restoredIndex].id
         c.setMediaItems(available.map { it.toMediaItem() }, restoredIndex, restoredPosition)
