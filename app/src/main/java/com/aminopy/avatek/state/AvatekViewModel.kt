@@ -101,6 +101,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private var future: ListenableFuture<MediaController>? = null
     private var tracksLoaded = false
     private var queueRestored = false
+    private var restoredTrackIdToIgnore: Long? = null
 
     val currentTrack: AudioTrack? get() = currentId?.let { byId[it] }
     fun trackById(id: Long): AudioTrack? = byId[id]
@@ -112,7 +113,12 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
             loadLyrics(currentId)
             syncQueue()
             if (mediaItem != null && reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
-                currentId?.let { recordPlay(it) }
+                val transitionedId = currentId
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED && transitionedId == restoredTrackIdToIgnore) {
+                    restoredTrackIdToIgnore = null
+                } else {
+                    transitionedId?.let { recordPlay(it) }
+                }
             }
         }
         override fun onIsPlayingChanged(isPlaying: Boolean) { this@AvatekViewModel.isPlaying = isPlaying; persistQueue() }
@@ -195,6 +201,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         val savedCurrentId = saved.trackIds.getOrNull(saved.currentIndex)
         val restoredIndex = available.indexOfFirst { it.id == savedCurrentId }.let { if (it >= 0) it else 0 }
         val restoredPosition = saved.positionMs.coerceAtMost(available[restoredIndex].durationMs.coerceAtLeast(0L))
+        restoredTrackIdToIgnore = available[restoredIndex].id
         c.setMediaItems(available.map { it.toMediaItem() }, restoredIndex, restoredPosition)
         c.repeatMode = saved.repeatMode
         c.shuffleModeEnabled = saved.shuffle
@@ -320,9 +327,11 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private fun recordPlay(id: Long) {
         playCounts = playCounts + (id to ((playCounts[id] ?: 0) + 1))
         recentIds = (listOf(id) + recentIds.filter { it != id }).take(HistoryStore.MAX_RECENT)
+        val countsSnapshot = playCounts
+        val recentSnapshot = recentIds
         viewModelScope.launch(Dispatchers.IO) {
-            historyStore.savePlayCounts(playCounts)
-            historyStore.saveRecent(recentIds)
+            historyStore.savePlayCounts(countsSnapshot)
+            historyStore.saveRecent(recentSnapshot)
         }
     }
 
