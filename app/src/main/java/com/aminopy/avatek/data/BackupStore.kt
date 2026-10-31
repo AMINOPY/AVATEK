@@ -32,29 +32,65 @@ class BackupStore(context: Context) {
         require(root.optString("format") == FORMAT)
         require(root.optInt("version") == VERSION)
         val source = root.getJSONObject("preferences")
-        PREFERENCE_FILES.forEach { name ->
-            val target = app.getSharedPreferences(name, Context.MODE_PRIVATE)
-            val values = source.optJSONObject(name) ?: JSONObject()
-            val editor = target.edit().clear()
-            val keys = values.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                when (val value = values.opt(key)) {
-                    null, JSONObject.NULL -> Unit
-                    is Boolean -> editor.putBoolean(key, value)
-                    is Int -> editor.putInt(key, value)
-                    is Long -> editor.putLong(key, value)
-                    is Double -> editor.putFloat(key, value.toFloat())
-                    is String -> editor.putString(key, value)
-                    is JSONArray -> {
-                        if (name == "avatek_library") {
-                            val set = (0 until value.length()).mapNotNull { value.optString(it).takeIf(String::isNotBlank) }.toSet()
-                            editor.putStringSet(key, set)
+
+        // Validate and decode the complete backup before changing any local data.
+        // A missing section must never be interpreted as an empty store and erase user data.
+        val decoded = PREFERENCE_FILES.associateWith { name ->
+            val values = source.optJSONObject(name) ?: error("Missing preference section: $name")
+            buildMap<String, Any> {
+                val keys = values.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    when (val value = values.opt(key)) {
+                        is Boolean, is Int, is Long, is Double, is String -> put(key, value)
+                        is JSONArray -> {
+                            require(name == "avatek_library") { "Unexpected array in $name" }
+                            val set = (0 until value.length())
+                                .mapNotNull { value.optString(it).takeIf(String::isNotBlank) }
+                                .toSet()
+                            put(key, set)
                         }
+                        else -> error("Unsupported backup value in $name")
                     }
                 }
             }
-            check(editor.commit())
+        }
+
+        val previous = PREFERENCE_FILES.associateWith { name ->
+            app.getSharedPreferences(name, Context.MODE_PRIVATE).all.toMap()
+        }
+        try {
+            PREFERENCE_FILES.forEach { name ->
+                val editor = app.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
+                decoded.getValue(name).forEach { (key, value) ->
+                    when (value) {
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is Double -> editor.putFloat(key, value.toFloat())
+                        is String -> editor.putString(key, value)
+                        is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                    }
+                }
+                check(editor.commit())
+            }
+        } catch (failure: Throwable) {
+            // Best-effort rollback if a storage commit fails partway through restore.
+            previous.forEach { (name, values) ->
+                val editor = app.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
+                values.forEach { (key, value) ->
+                    when (value) {
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is Float -> editor.putFloat(key, value)
+                        is String -> editor.putString(key, value)
+                        is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                    }
+                }
+                editor.commit()
+            }
+            throw failure
         }
         true
     }.getOrDefault(false)
