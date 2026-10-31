@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -106,8 +107,8 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
     val recent = vm.recentlyPlayed()
     val top = vm.mostPlayed(5)
     val added = vm.recentlyAdded(5)
-    val dailyMix = vm.dailyMix(30)
-    val discoveryMix = vm.discoveryMix(30)
+    val dailyMix = remember(vm.tracks, vm.favorites, vm.playCounts, vm.recentIds) { vm.dailyMix(30) }
+    val discoveryMix = remember(vm.tracks, vm.playCounts) { vm.discoveryMix(30) }
     val sortedAll = vm.sorted(vm.tracks, SortMode.Title)
 
     LazyColumn(
