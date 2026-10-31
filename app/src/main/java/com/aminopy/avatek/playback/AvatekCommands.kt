@@ -12,6 +12,7 @@ object AvatekCommands {
     const val VIRTUALIZER = "avatek.eq.virtualizer"
     const val EQ_RESET = "avatek.eq.reset"
     const val LOUDNESS = "avatek.eq.loudness"
+    const val CROSSFADE = "avatek.playback.crossfade"
 
     const val KEY_ENABLED = "enabled"
     const val KEY_BAND = "band"
@@ -28,8 +29,9 @@ object AvatekCommands {
     const val KEY_LOUDNESS = "loudness"
     const val KEY_LOUDNESS_ENABLED = "loudness_enabled"
     const val KEY_GAIN = "gain"
+    const val KEY_CROSSFADE_MS = "crossfade_ms"
 
-    val all: List<SessionCommand> = listOf(EQ_INFO, EQ_ENABLED, EQ_BAND, BASS, VIRTUALIZER, LOUDNESS, EQ_RESET)
+    val all: List<SessionCommand> = listOf(EQ_INFO, EQ_ENABLED, EQ_BAND, BASS, VIRTUALIZER, LOUDNESS, EQ_RESET, CROSSFADE)
         .map { SessionCommand(it, Bundle.EMPTY) }
 }
 
