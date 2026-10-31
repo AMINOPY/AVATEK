@@ -7,7 +7,8 @@ enum class AccentTheme(val id: String, val label: String) {
     CRIMSON("crimson", "سرخ خون"),
     AURORA("aurora", "شفق"),
     EMERALD("emerald", "زمرد"),
-    VIOLET("violet", "بنفش نئون");
+    VIOLET("violet", "بنفش نئون"),
+    WASTELAND("wasteland", "آخرین بازمانده");
 
     companion object {
         fun fromId(id: String?) = entries.firstOrNull { it.id == id } ?: GOLD

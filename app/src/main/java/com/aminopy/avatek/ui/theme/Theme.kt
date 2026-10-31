@@ -26,6 +26,7 @@ data class AvatekPalette(
 )
 
 fun paletteFor(theme: AccentTheme): AvatekPalette = when (theme) {
+    AccentTheme.WASTELAND -> WastelandPalette
     AccentTheme.GOLD -> AvatekPalette(
         accent = Color(0xFFE2BE78), accentDeep = Color(0xFF8A6A2F), secondary = Color(0xFFB3263A),
         bgTop = Color(0xFF14100B), bgBottom = Color(0xFF07080A)

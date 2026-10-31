@@ -99,10 +99,30 @@ fun SettingsScreen(vm: AvatekViewModel, ui: AppUi) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = bottom)) {
         ScreenHeader("تنظیمات", subtitle = "ظاهر و رفتار AVATEK")
         Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Section("ظاهر", 0) {
+            Section("تم‌ها", 0) {
+                Text("یک تم کامل با پس‌زمینه، پلیر، نوار پایین و انیمیشن‌های جدا.", color = p.muted, fontSize = 11.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf(AccentTheme.GOLD to "کلاسیک", AccentTheme.WASTELAND to "آخرین بازمانده").forEach { (t, name) ->
+                        val sel = if (t == AccentTheme.WASTELAND) s.accent == t else s.accent != AccentTheme.WASTELAND
+                        val pal = paletteFor(t)
+                        Box(
+                            Modifier.weight(1f).height(96.dp).clip(RoundedCornerShape(18.dp))
+                                .background(Brush.linearGradient(if (t == AccentTheme.WASTELAND) listOf(Color(0xFF3B2D18), Color(0xFF16210F), Color(0xFF080705)) else listOf(Color(0xFF241A28), Color(0xFF0C0D12))))
+                                .border(if (sel) 2.dp else 1.dp, if (sel) pal.accent else Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
+                                .bounceClick(pressedScale = 0.95f) { vm.updateSettings { it.copy(accent = t) } }
+                                .padding(12.dp),
+                            contentAlignment = Alignment.BottomStart
+                        ) {
+                            Text(name, color = pal.text, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            if (sel) Icon(Icons.Rounded.Check, null, tint = pal.accent, modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
+                        }
+                    }
+                }
+            }
+            Section("ظاهر", 1) {
                 Text("رنگ اصلی", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    AccentTheme.entries.forEach { t ->
+                    AccentTheme.entries.filter { it != AccentTheme.WASTELAND }.forEach { t ->
                         val pal = paletteFor(t)
                         val sel = s.accent == t
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.bounceClick(pressedScale = 0.88f) { vm.updateSettings { it.copy(accent = t) } }) {

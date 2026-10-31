@@ -28,11 +28,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aminopy.avatek.ui.theme.Emphasized
 import com.aminopy.avatek.ui.theme.LocalPalette
+import com.aminopy.avatek.ui.theme.isWasteland
 import kotlinx.coroutines.launch
 
 /** Intro: a gold ring draws itself, the wordmark rises out of it, then [onFinished] fires. */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
+    if (com.aminopy.avatek.ui.theme.LocalUi.current.accent.isWasteland) {
+        com.aminopy.avatek.ui.theme.WastelandSplash(onFinished)
+        return
+    }
     val p = LocalPalette.current
     val ring = remember { Animatable(0f) }
     val word = remember { Animatable(0f) }

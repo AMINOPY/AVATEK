@@ -100,6 +100,7 @@ import com.aminopy.avatek.ui.theme.LocalUi
 import com.aminopy.avatek.ui.theme.bounceClick
 import com.aminopy.avatek.ui.theme.glass
 import com.aminopy.avatek.ui.theme.rememberAmbient
+import com.aminopy.avatek.ui.theme.isWasteland
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.min
@@ -111,6 +112,10 @@ fun NowPlayingScreen(vm: AvatekViewModel, ui: AppUi) {
     val track = vm.currentTrack
     if (track == null) {
         LaunchedEffect(Unit) { ui.closePlayer() }
+        return
+    }
+    if (settings.accent.isWasteland) {
+        com.aminopy.avatek.ui.theme.WastelandNowPlaying(vm, ui, track)
         return
     }
     val ambient = rememberAmbient(track.id, track.albumId, track.albumKey, p.secondary)

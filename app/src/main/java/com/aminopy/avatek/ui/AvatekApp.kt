@@ -61,6 +61,10 @@ import com.aminopy.avatek.ui.theme.AvatekTheme
 import com.aminopy.avatek.ui.theme.Emphasized
 import com.aminopy.avatek.ui.theme.LocalHaze
 import com.aminopy.avatek.ui.theme.LocalPalette
+import com.aminopy.avatek.ui.theme.WastelandBackground
+import com.aminopy.avatek.ui.theme.WastelandHome
+import com.aminopy.avatek.ui.theme.WastelandNavBar
+import com.aminopy.avatek.ui.theme.isWasteland
 import com.aminopy.avatek.ui.theme.rememberAmbient
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
@@ -81,6 +85,7 @@ fun AvatekApp(
 
     AvatekTheme(vm.settings) {
         val p = LocalPalette.current
+        val wasteland = vm.settings.accent.isWasteland
         val track = vm.currentTrack
         val ambient = rememberAmbient(track?.id, track?.albumId ?: 0L, track?.albumKey, p.secondary)
         val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -102,14 +107,14 @@ fun AvatekApp(
         ) {
             Box(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().hazeSource(haze)) {
-                    AuroraBackground(ambient)
+                    if (wasteland) WastelandBackground() else AuroraBackground(ambient)
                     AnimatedContent(
                         targetState = nav.current,
                         transitionSpec = { screenTransition(nav) },
                         label = "nav"
                     ) { route ->
                         when (route) {
-                            Route.Home -> HomeScreen(vm, ui)
+                            Route.Home -> if (wasteland) WastelandHome(vm, ui) else HomeScreen(vm, ui)
                             Route.Library -> LibraryScreen(vm, ui)
                             Route.Search -> SearchScreen(vm, ui)
                             Route.Lab -> LabScreen(vm, ui)
@@ -137,7 +142,7 @@ fun AvatekApp(
                         visible = !ui.playerOpen,
                         enter = slideInVertically(spring(0.8f, 380f)) { it * 2 } + fadeIn(),
                         exit = slideOutVertically(tween(260)) { it * 2 } + fadeOut(tween(200))
-                    ) { FloatingNavBar(nav, haze) }
+                    ) { if (wasteland) WastelandNavBar(nav) else FloatingNavBar(nav, haze) }
                 }
 
                 SheetHost(vm, ui)
