@@ -1,37 +1,68 @@
 # AVATEK
 
-AVATEK is an offline-first Android music player with a premium black, metallic-gold, and blood-red visual identity.
+AVATEK is a Persian-first, offline music player for Android with a premium black, metallic-gold, glass and animated visual identity.
 
-## Implemented foundation
+## Platform and architecture
 
-- Kotlin + Jetpack Compose + Material 3
-- Android application module using Gradle Kotlin DSL
-- Minimum Android version: Android 8.0 (API 26)
-- Media3 ExoPlayer and MediaSessionService playback engine
-- Local audio discovery through MediaStore with runtime permission handling
-- Search across track title, artist, and album
-- Persistent local favorites and a favorites-only filter
-- Persistent offline playlist storage with create, add, remove, and delete operations
-- Main overflow menu with library, favorites, playlists, rescan, settings/about entry points
-- Playlist manager dialog with create, list, track counts, and delete
-- Track metadata: artist, album, and duration
-- Track selection, play/pause, previous/next, and playback seek bar
-- Persian-first dark luxury interface
-- GitHub Actions workflow for debug APK compilation
+- Native Android app written in Kotlin.
+- UI: Jetpack Compose + Material 3.
+- Playback: AndroidX Media3 ExoPlayer and MediaSessionService.
+- Library discovery: Android MediaStore; no online music catalog or account is required.
+- Local persistence: SharedPreferences-backed stores for favorites, playlists, listening history, settings, lyrics and playback queue.
+- Minimum Android version: Android 8.0 (API 26); target SDK 35; compile SDK 36.
+- JDK 17 and Gradle 8.14.3 in CI.
 
-## Build prerequisites
+## Features
 
-- Android Studio with Android SDK 36 installed
-- JDK 17
-- Gradle 8.14.3 or compatible version
+### Home and discovery
+- Local daily mix ranked using favorites, play counts, recency and recently added tracks.
+- Discovery mix for less-played and recently added music.
+- Listening insights: total plays, unique tracks heard, favorites and most-played track.
 
-The repository does not currently include Gradle Wrapper files. CI installs Gradle directly. The Android SDK setup has been fixed and the first Gradle compilation is being checked; review the linked Pull Request's Checks tab for the current result.
+### Music library
+- Songs, albums, artists, folders, genres and playlists.
+- Local search by title, artist, album, folder and genre.
+- Sort by title, artist, recently added, duration and most played.
+- Favorites and editable playlists.
+- MediaStore rescanning and configurable minimum track duration.
 
-## Next milestones
+### Playback
+- Background playback through MediaSessionService.
+- System media notification and headset/media-button integration.
+- Full-screen player with animated vinyl artwork, waveform seek bar and live audio visualizer.
+- Queue controls: play next, append, reorder, remove and clear.
+- Previous/next, seek, repeat modes, shuffle and playback speed.
+- Queue, current track, position, repeat, shuffle and speed are persisted for session restoration.
 
-1. Confirm a green CI build and address any compile or runtime issues.
-2. Add dedicated album and artist browsing screens.
-3. Add editable playlists, queue controls, repeat, and shuffle.
-4. Add lyrics, visualizer, and equalizer integration after playback stability is verified.
+### Sound Lab
+- Device-supported equalizer bands.
+- Bass boost and virtualizer where the Android device supports them.
+- Saved effect levels and presets.
+- Playback speed and sleep timer, including stop-at-end-of-track.
 
-AVATEK is designed for local playback first. No account, cloud library, or online music catalog is assumed.
+### Lyrics
+- Import local LRC files through Android's document picker.
+- Timestamp parsing supports multiple timestamps per line and global LRC offset.
+- Lyrics are stored locally per track and synchronized to playback position.
+- No network lookup is performed.
+
+### Settings and privacy
+- Multiple accent themes, glass intensity, animations, ambient artwork colors, visualizer, haptics and notification style.
+- Local JSON backup and restore for AVATEK app data, including settings, favorites, playlists, history, queue, EQ preferences and imported lyrics.
+- Backup does not copy the user's music files; those remain in their original folders.
+- Listening data and imported lyrics stay on the device unless the user explicitly exports a backup.
+
+## Build and validation
+
+GitHub Actions runs:
+
+    gradle --no-daemon --continue --console=plain :app:testDebugUnitTest :app:assembleDebug
+
+Unit tests cover LRC timestamp parsing, multiple timestamps, offsets and metadata filtering. Review the latest Actions run on foundation/ui-redesign for the authoritative build and APK artifact status.
+
+## Development policy
+
+- Keep the playback engine and existing features stable; avoid unrelated rewrites.
+- UI inspiration may come from Flutter/Dart and native Android music-player projects, but AVATEK remains a native Kotlin/Compose application.
+- Do not copy third-party source code without reviewing its license and attribution requirements.
+- Develop on foundation/ui-redesign; keep main untouched until the complete build and device-level verification are approved.
