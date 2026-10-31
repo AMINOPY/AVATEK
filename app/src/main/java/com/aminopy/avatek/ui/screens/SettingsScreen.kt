@@ -165,7 +165,7 @@ fun SettingsScreen(vm: AvatekViewModel, ui: AppUi) {
                 ) {
                     Icon(Icons.Rounded.Info, null, tint = p.accent)
                     Text("درباره‌ی AVATEK", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    Text("نسخه ۰٫۲٫۰", color = p.muted, fontSize = 11.sp)
+                    Text("نسخه ۰٫۳٫۰", color = p.muted, fontSize = 11.sp)
                 }
             }
         }
@@ -191,7 +191,7 @@ fun AboutScreen(vm: AvatekViewModel, ui: AppUi) {
         }
         Text("AVATEK", color = p.text, fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 8.sp, modifier = Modifier.padding(top = 18.dp))
         Text("YOUR MUSIC. YOUR WORLD.", color = p.muted, fontSize = 11.sp, letterSpacing = 3.sp)
-        Text("نسخه ۰٫۲٫۰", color = p.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        Text("نسخه ۰٫۳٫۰", color = p.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
         Column(
             Modifier.padding(top = 26.dp).fillMaxWidth().glass(RoundedCornerShape(28.dp), strength = 0.7f).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
