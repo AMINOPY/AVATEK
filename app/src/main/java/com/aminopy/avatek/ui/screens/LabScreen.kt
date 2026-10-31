@@ -64,7 +64,11 @@ private val Presets = listOf(
     "بیس" to listOf(0.7f, 0.45f, 0f, -0.1f, 0f),
     "صدای انسان" to listOf(-0.3f, 0f, 0.5f, 0.35f, -0.1f),
     "راک" to listOf(0.5f, 0.2f, -0.2f, 0.3f, 0.5f),
-    "کریستالی" to listOf(-0.2f, 0f, 0.1f, 0.5f, 0.7f)
+    "کریستالی" to listOf(-0.2f, 0f, 0.1f, 0.5f, 0.7f),
+    "جاز" to listOf(0.35f, 0.15f, -0.1f, 0.25f, 0.35f),
+    "کلاسیک" to listOf(0.2f, 0.1f, -0.15f, 0.1f, 0.25f),
+    "الکترونیک" to listOf(0.65f, 0.25f, -0.15f, 0.35f, 0.6f),
+    "پادکست" to listOf(-0.35f, -0.1f, 0.45f, 0.35f, -0.2f)
 )
 
 @Composable
@@ -73,6 +77,7 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
     val bottom = LocalBottomInset.current
     val eq = vm.eq
     var confirmReset by remember { mutableStateOf(false) }
+    var selectedPreset by remember { mutableStateOf("تخت") }
     LaunchedEffect(vm.engineReady) { if (vm.engineReady) vm.refreshEqualizer() }
 
     if (confirmReset) {
@@ -103,9 +108,11 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
                     )
                 }
                 if (eq.available && eq.levels.isNotEmpty()) {
+                    Text("پروفایل‌های آماده", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Presets.forEach { (name, curve) ->
-                            GlassChip(name, false, {
+                            GlassChip(name, selectedPreset == name, {
+                                selectedPreset = name
                                 val n = eq.levels.size
                                 for (b in 0 until n) {
                                     val x = if (n == 1) 0f else b * (curve.size - 1f) / (n - 1f)
@@ -123,7 +130,7 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
                         eq.levels.forEachIndexed { i, level ->
                             EqBand(
                                 level, eq.minLevel, eq.maxLevel, eq.centerFreqsHz.getOrElse(i) { 0 }, eq.enabled
-                            ) { vm.setEqBand(i, it) }
+                            ) { selectedPreset = "سفارشی"; vm.setEqBand(i, it) }
                         }
                     }
                 }
