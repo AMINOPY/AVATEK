@@ -95,6 +95,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     var lyrics by mutableStateOf<List<LyricLine>>(emptyList()); private set
     var lyricsVisible by mutableStateOf(false); private set
     var eq by mutableStateOf(EqualizerInfo()); private set
+    var crossfadeDurationMs by mutableStateOf(0L); private set
     var eqProfiles by mutableStateOf(equalizerProfileStore.names()); private set
     var toast by mutableStateOf<String?>(null); private set
     private var toastJob: Job? = null
@@ -564,11 +565,22 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         val c = controller ?: return
         val f = c.sendCustomCommand(SessionCommand(action, Bundle.EMPTY), args)
         f.addListener({
-            runCatching { f.get() }.onSuccess { r -> eq = parseEq(r.extras) }
+            runCatching { f.get() }.onSuccess { r ->
+                eq = parseEq(r.extras)
+                crossfadeDurationMs = r.extras.getLong(AvatekCommands.KEY_CROSSFADE_MS, crossfadeDurationMs).coerceIn(0L, 12_000L)
+            }
         }, ContextCompat.getMainExecutor(getApplication()))
     }
 
     fun refreshEqualizer() = sendEq(AvatekCommands.EQ_INFO)
+
+    fun setCrossfadeDuration(valueMs: Long) {
+        val safe = valueMs.coerceIn(0L, 12_000L)
+        crossfadeDurationMs = safe
+        sendEq(AvatekCommands.CROSSFADE, Bundle().apply {
+            putLong(AvatekCommands.KEY_CROSSFADE_MS, safe)
+        })
+    }
 
     fun saveEqProfile(name: String) {
         if (!eq.available || eq.levels.isEmpty()) {
