@@ -102,7 +102,7 @@ fun IntelligenceScreen(vm: AvatekViewModel, ui: AppUi) {
 @Composable
 private fun Metric(label: String, value: String) {
     val p = LocalPalette.current
-    Column(Modifier.weight(1f).glass(RoundedCornerShape(16.dp), strength = 0.42f).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth(0.31f).glass(RoundedCornerShape(16.dp), strength = 0.42f).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, color = p.accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
         Text(label, color = p.muted, fontSize = 9.sp)
     }
