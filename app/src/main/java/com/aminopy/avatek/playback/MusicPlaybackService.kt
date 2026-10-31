@@ -8,7 +8,10 @@ import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
@@ -22,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture
  * so audio keeps playing when the UI is not visible. The activity talks to it through
  * a MediaController and the custom commands in [AvatekCommands].
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MusicPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
@@ -38,7 +42,17 @@ class MusicPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val exo = ExoPlayer.Builder(this)
+        setMediaNotificationProvider(AvatekNotificationProvider(this))
+        val renderers = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean
+            ): AudioSink = DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                .setAudioProcessors(arrayOf(AnalyzerProcessor()))
+                .build()
+        }
+        val exo = ExoPlayer.Builder(this, renderers)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)

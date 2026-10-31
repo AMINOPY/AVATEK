@@ -127,7 +127,8 @@ fun SettingsScreen(vm: AvatekViewModel, ui: AppUi) {
                 )
                 ToggleRow("انیمیشن‌ها", "پس‌زمینه‌ی زنده، گذارها و چرخش گرامافون. برای صرفه‌جویی در باتری خاموشش کن.", s.animations) { v -> vm.updateSettings { it.copy(animations = v) } }
                 ToggleRow("رنگ محیطی آهنگ", "نور پس‌زمینه از رنگ کاور آهنگ در حال پخش می‌گیرد.", s.ambientColors) { v -> vm.updateSettings { it.copy(ambientColors = v) } }
-                ToggleRow("نوارهای ریتم", "انیمیشن تزئینی در پلیر (تحلیل واقعی صدا نیست).", s.visualizer) { v -> vm.updateSettings { it.copy(visualizer = v) } }
+                ToggleRow("نوارهای ریتم", "نوارها از تحلیل زنده‌ی صدای در حال پخش (FFT) حرکت می‌گیرند و با ضرب آهنگ می‌تپند.", s.visualizer) { v -> vm.updateSettings { it.copy(visualizer = v) } }
+                ToggleRow("اعلان اختصاصی AVATEK", "اعلان پخش با رنگ تم و برچسب AVATEK. اگر خاموش باشد، اعلان استاندارد آهنگ سیستم نشان داده می‌شود.", s.customNotification) { v -> vm.updateSettings { it.copy(customNotification = v) } }
                 ToggleRow("لرزش لمسی", "بازخورد خفیف هنگام لمس دکمه‌ها.", s.haptics) { v -> vm.updateSettings { it.copy(haptics = v) } }
             }
             Section("کتابخانه", 1) {

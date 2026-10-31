@@ -53,6 +53,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -80,7 +82,7 @@ import com.aminopy.avatek.state.AvatekViewModel
 import com.aminopy.avatek.ui.AppUi
 import com.aminopy.avatek.ui.Sheet
 import com.aminopy.avatek.ui.components.FavoriteButton
-import com.aminopy.avatek.ui.components.GlowSeekBar
+import com.aminopy.avatek.ui.components.WaveSeekBar
 import com.aminopy.avatek.ui.components.PlayPauseButton
 import com.aminopy.avatek.ui.components.RhythmVisualizer
 import com.aminopy.avatek.ui.fa
@@ -213,7 +215,14 @@ fun NowPlayingScreen(vm: AvatekViewModel, ui: AppUi) {
             }
 
             // seek
-            GlowSeekBar(vm.positionMs, vm.durationMs, { vm.seekTo(it) }, Modifier.padding(top = 4.dp))
+            val context = androidx.compose.ui.platform.LocalContext.current
+            var peaks by remember(track.id) { mutableStateOf<FloatArray?>(null) }
+            LaunchedEffect(track.id) {
+                peaks = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.aminopy.avatek.playback.WaveformExtractor.extract(context, track.uri, alive = { true })
+                }
+            }
+            WaveSeekBar(vm.positionMs, vm.durationMs, peaks, vm.isPlaying, { vm.seekTo(it) }, Modifier.padding(top = 4.dp))
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(faDuration(vm.positionMs), color = p.muted, fontSize = 11.sp)

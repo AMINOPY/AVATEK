@@ -21,6 +21,7 @@ data class UiSettings(
     val haptics: Boolean = true,
     val ambientColors: Boolean = true,
     val visualizer: Boolean = true,
+    val customNotification: Boolean = true,
     val minDurationSec: Int = 30
 )
 
@@ -34,6 +35,7 @@ class SettingsStore(context: Context) {
         haptics = prefs.getBoolean("haptics", true),
         ambientColors = prefs.getBoolean("ambient", true),
         visualizer = prefs.getBoolean("visualizer", true),
+        customNotification = prefs.getBoolean("custom_notification", true),
         minDurationSec = prefs.getInt("min_duration", 30)
     )
 
@@ -45,6 +47,7 @@ class SettingsStore(context: Context) {
             .putBoolean("haptics", s.haptics)
             .putBoolean("ambient", s.ambientColors)
             .putBoolean("visualizer", s.visualizer)
+            .putBoolean("custom_notification", s.customNotification)
             .putInt("min_duration", s.minDurationSec)
             .apply()
     }

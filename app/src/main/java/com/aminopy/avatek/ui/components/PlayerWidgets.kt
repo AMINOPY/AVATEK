@@ -1,5 +1,11 @@
 package com.aminopy.avatek.ui.components
 
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.unit.sp
+import com.aminopy.avatek.ui.fa
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.min
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -122,44 +128,146 @@ fun PlayPauseButton(
 }
 
 /**
- * Decorative rhythm bars. It is an animation driven by the playing state, not an analysis of the audio signal.
+ * Rhythm bars driven by the real audio: the playback engine runs an FFT over the PCM being played
+ * ([com.aminopy.avatek.playback.AudioLevels]) and each bar follows one frequency band; the whole row pulses on beats.
  */
 @Composable
 fun RhythmVisualizer(playing: Boolean, modifier: Modifier = Modifier, bars: Int = 40) {
     val ui = LocalUi.current
     val p = LocalPalette.current
-    val energy by animateFloatAsState(if (playing) 1f else 0.05f, tween(800), label = "energy")
-    val time = remember { mutableFloatStateOf(0f) }
+    val energy by animateFloatAsState(if (playing) 1f else 0f, tween(500), label = "energy")
+    val tick = remember { mutableFloatStateOf(0f) }
+    val shown = remember(bars) { FloatArray(bars) }
     LaunchedEffect(playing, ui.animations) {
-        if (playing && ui.animations) {
+        if (ui.animations) {
             var last = 0L
             while (isActive) {
                 androidx.compose.runtime.withFrameNanos { n ->
                     if (last == 0L) last = n
-                    time.floatValue += (n - last) / 1_000_000_000f
+                    tick.floatValue += (n - last) / 1_000_000_000f
                     last = n
                 }
             }
         }
     }
     Canvas(modifier) {
-        val t = time.floatValue
+        @Suppress("UNUSED_VARIABLE") val t = tick.floatValue
+        val levels = com.aminopy.avatek.playback.AudioLevels
+        val src = levels.bands
+        val beat = levels.beat * energy
         val gap = 3.dp.toPx()
         val bw = (size.width - gap * (bars - 1)) / bars
         for (i in 0 until bars) {
-            val x = i / (bars - 1f)
-            val envelope = 0.5f + 0.5f * sin(x * PI.toFloat())
-            val v = (sin(t * 3.1f + i * 0.55f) * 0.5f + 0.5f) * 0.55f + (sin(t * 5.3f + i * 1.37f) * 0.5f + 0.5f) * 0.45f
-            val h = max(size.height * (0.06f + 0.94f * v * envelope * energy), 3.dp.toPx())
+            val band = (i * src.size / bars).coerceIn(0, src.size - 1)
+            val target = (src[band] * 1.15f).coerceIn(0f, 1f) * energy
+            shown[i] += (target - shown[i]) * (if (target > shown[i]) 0.6f else 0.25f)
+            val h = max(size.height * (0.05f + 0.95f * shown[i] * (1f + 0.12f * beat)).coerceAtMost(1f), 3.dp.toPx())
             drawRoundRect(
                 brush = Brush.verticalGradient(
-                    listOf(p.accent, p.secondary.copy(alpha = 0.25f)),
+                    listOf(p.accent.copy(alpha = 0.7f + 0.3f * beat), p.secondary.copy(alpha = 0.25f)),
                     startY = size.height - h, endY = size.height
                 ),
                 topLeft = Offset(i * (bw + gap), size.height - h),
                 size = Size(bw, h),
                 cornerRadius = CornerRadius(bw / 2f, bw / 2f)
             )
+        }
+    }
+}
+
+/**
+ * Seek bar drawn as the track's real waveform. Dragging magnifies the bars around the finger, leaves a streak
+ * from where you started, and shows how many seconds you are jumping; double-tap the left/right half for -/+10s.
+ */
+@Composable
+fun WaveSeekBar(
+    positionMs: Long,
+    durationMs: Long,
+    peaks: FloatArray?,
+    playing: Boolean,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val p = LocalPalette.current
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    var drag by remember { mutableStateOf<Float?>(null) }
+    var origin by remember { mutableFloatStateOf(0f) }
+    val frac = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    val fraction = drag ?: frac
+    val fracNow by androidx.compose.runtime.rememberUpdatedState(frac)
+    val posNow by androidx.compose.runtime.rememberUpdatedState(positionMs)
+    val grow by animateFloatAsState(if (drag != null) 1f else 0f, spring(0.55f, 420f), label = "wgrow")
+    val tick = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(playing) {
+        while (isActive) { androidx.compose.runtime.withFrameNanos { tick.floatValue = it / 1e9f } }
+    }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(
+            modifier.fillMaxWidth().height(76.dp)
+                .pointerInput(durationMs) {
+                    detectTapGestures(
+                        onDoubleTap = { o ->
+                            if (durationMs > 0) {
+                                val d = if (o.x < size.width / 2f) -10_000L else 10_000L
+                                onSeek((posNow + d).coerceIn(0L, durationMs))
+                            }
+                        },
+                        onTap = { o -> if (durationMs > 0) onSeek((o.x / size.width * durationMs).toLong()) }
+                    )
+                }
+                .pointerInput(durationMs) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { o -> origin = fracNow; drag = (o.x / size.width).coerceIn(0f, 1f) },
+                        onHorizontalDrag = { change, _ -> drag = (change.position.x / size.width).coerceIn(0f, 1f) },
+                        onDragEnd = { drag?.let { f -> if (durationMs > 0) onSeek((f * durationMs).toLong()) }; drag = null },
+                        onDragCancel = { drag = null }
+                    )
+                }
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                @Suppress("UNUSED_VARIABLE") val t = tick.floatValue
+                val count = peaks?.size ?: 96
+                val beat = if (playing) com.aminopy.avatek.playback.AudioLevels.beat else 0f
+                val gap = 2.dp.toPx()
+                val bw = (size.width - gap * (count - 1)) / count
+                val mid = size.height / 2f
+                val maxH = size.height * 0.82f
+                if (grow > 0.01f) {
+                    val x0 = origin * size.width
+                    val x1 = fraction * size.width
+                    drawRect(
+                        Brush.horizontalGradient(
+                            if (x1 >= x0) listOf(Color.Transparent, p.accent.copy(alpha = 0.22f * grow)) else listOf(p.accent.copy(alpha = 0.22f * grow), Color.Transparent),
+                            startX = min(x0, x1), endX = max(x0, x1)
+                        ),
+                        Offset(min(x0, x1), 0f), Size(abs(x1 - x0), size.height)
+                    )
+                }
+                for (i in 0 until count) {
+                    val x = i / (count - 1f)
+                    val base = peaks?.get(i) ?: 0.18f
+                    val d = (x - fraction) / 0.07f
+                    val lens = 1f + 0.9f * grow * exp(-d * d)
+                    val nearHead = exp(-((x - fraction) / 0.025f).let { it * it })
+                    val h = (maxH * base * lens * (1f + 0.25f * beat * nearHead)).coerceIn(3.dp.toPx(), size.height)
+                    val played = x <= fraction
+                    drawRoundRect(
+                        if (played) p.accent.copy(alpha = 0.55f + 0.45f * nearHead) else Color.White.copy(alpha = 0.22f),
+                        Offset(i * (bw + gap), mid - h / 2f), Size(bw, h), CornerRadius(bw / 2f, bw / 2f)
+                    )
+                }
+                val hx = size.width * fraction
+                drawCircle(p.accent.copy(alpha = 0.18f + 0.2f * beat), radius = (10.dp + 8.dp * grow + 7.dp * beat).toPx(), center = Offset(hx, mid))
+                drawRoundRect(Color.White, Offset(hx - 1.5.dp.toPx(), 2.dp.toPx()), Size(3.dp.toPx(), size.height - 4.dp.toPx()), CornerRadius(2.dp.toPx()))
+                if (grow > 0.05f && durationMs > 0) {
+                    val sec = ((fraction - origin) * durationMs / 1000f).toInt()
+                    val label = (if (sec >= 0) "+" else "−") + abs(sec).fa() + "ث"
+                    val r = measurer.measure(label, androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                    val bx = (hx - r.size.width / 2f - 8.dp.toPx()).coerceIn(0f, size.width - r.size.width - 16.dp.toPx())
+                    drawRoundRect(p.accentDeep.copy(alpha = 0.92f * grow), Offset(bx, 0f), Size(r.size.width + 16.dp.toPx(), r.size.height + 6.dp.toPx()), CornerRadius(12.dp.toPx()))
+                    drawText(r, topLeft = Offset(bx + 8.dp.toPx(), 3.dp.toPx()), alpha = grow)
+                }
+            }
         }
     }
 }
