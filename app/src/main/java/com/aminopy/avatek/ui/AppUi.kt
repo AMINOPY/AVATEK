@@ -29,9 +29,12 @@ class AppUi(
     val requestBackupImport: () -> Unit = {}
 ) {
     var playerOpen by mutableStateOf(false); private set
+    var drawerOpen by mutableStateOf(false); private set
     var sheet by mutableStateOf<Sheet?>(null); private set
 
     fun openPlayer() { playerOpen = true }
+    fun openDrawer() { drawerOpen = true }
+    fun closeDrawer() { drawerOpen = false }
     fun closePlayer() { playerOpen = false }
     fun show(s: Sheet) { sheet = s }
     fun dismissSheet() { sheet = null }
