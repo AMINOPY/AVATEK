@@ -149,7 +149,10 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
             }
         }
         item {
-            Column(Modifier.padding(horizontal = 20.dp).staggerIn(3), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            ListeningPulseCard(vm, Modifier.padding(horizontal = 20.dp).staggerIn(3))
+        }
+        item {
+            Column(Modifier.padding(horizontal = 20.dp).staggerIn(4), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickTile(Icons.Rounded.Favorite, "علاقه‌مندی‌ها", "${vm.favorites.size.fa()} آهنگ", Color(0xFFFF4D6D), Modifier.weight(1f)) { ui.nav.push(Route.Favorites) }
                     QuickTile(Icons.Rounded.PlaylistPlay, "پلی‌لیست‌ها", "${vm.playlists.size.fa()} لیست", p.accent, Modifier.weight(1f)) { vm.libraryTab = 3; ui.nav.selectTab(Route.Library) }
@@ -219,6 +222,49 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
             items(added.size) { i -> TrackRow(added[i], added, Modifier.padding(horizontal = 20.dp)) }
         }
         item { Spacer(Modifier.height(4.dp)) }
+    }
+}
+
+@Composable
+private fun ListeningPulseCard(vm: AvatekViewModel, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    val totalPlays = vm.playCounts.values.sumOf { it.coerceAtLeast(0).toLong() }
+    val uniquePlayed = vm.playCounts.count { (id, count) -> count > 0 && vm.trackById(id) != null }
+    val leader = vm.mostPlayed(1).firstOrNull()
+    Column(
+        modifier.fillMaxWidth().glass(RoundedCornerShape(26.dp), tint = p.accent, strength = 0.55f)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("نبض شنیدن تو", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text("آمار محلی؛ فقط بر اساس پخش‌های همین دستگاه", color = p.muted, fontSize = 10.sp)
+            }
+            Icon(Icons.Rounded.TrendingUp, null, tint = p.accent, modifier = Modifier.size(22.dp))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatChip("پخش کل", totalPlays.fa(), Modifier.weight(1f))
+            StatChip("آهنگ شنیده‌شده", uniquePlayed.fa(), Modifier.weight(1f))
+            StatChip("علاقه‌مندی", vm.favorites.size.fa(), Modifier.weight(1f))
+        }
+        if (leader != null) {
+            Row(
+                Modifier.fillMaxWidth().bounceClick(pressedScale = 0.97f) {
+                    vm.playTrackIn(vm.sorted(vm.tracks), leader)
+                },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Artwork(leader.albumKey, leader.id, leader.albumId, Modifier.size(42.dp), RoundedCornerShape(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("بیشترین پخش", color = p.muted, fontSize = 10.sp)
+                    Text(leader.title, color = p.text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Text("${(vm.playCounts[leader.id] ?: 0).fa()} بار", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Rounded.PlayArrow, null, tint = p.accent, modifier = Modifier.size(20.dp))
+            }
+        }
     }
 }
 
