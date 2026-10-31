@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,6 +17,10 @@ import com.aminopy.avatek.ui.AvatekApp
 class MainActivity : ComponentActivity() {
     private val vm: AvatekViewModel by viewModels()
 
+    private val lyricsLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) vm.importLyrics(uri)
+    }
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -25,7 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { AvatekApp(vm, requestPermission = ::requestPermissions) }
+        setContent { AvatekApp(vm, requestPermission = ::requestPermissions, requestLyricsImport = ::requestLyricsImport) }
         if (savedInstanceState == null && hasAudioPermission()) vm.scan()
     }
 
@@ -35,6 +40,8 @@ class MainActivity : ComponentActivity() {
 
     private fun hasAudioPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, audioPermission()) == PackageManager.PERMISSION_GRANTED
+
+    private fun requestLyricsImport() { lyricsLauncher.launch(arrayOf("text/*", "application/x-lrc")) }
 
     private fun requestPermissions() {
         if (hasAudioPermission()) { vm.scan(); return }
