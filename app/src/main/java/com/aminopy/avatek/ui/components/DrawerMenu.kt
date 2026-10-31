@@ -34,7 +34,6 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.AutoMode
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SurroundSound
 import androidx.compose.material3.Icon
@@ -106,7 +105,7 @@ fun AvatekDrawer(vm: AvatekViewModel, ui: AppUi) {
                         ui.closeDrawer(); vm.playList(vm.discoveryMix(40)); ui.openPlayer()
                     }
                     DrawerItem(Icons.Rounded.History, "نبض شنیدن", "آمار و تاریخچه‌ی پخش", p.accent) { go(ui, Route.ListeningStats) }
-                    DrawerItem(Icons.Rounded.AutoMode, "Smart Crate", "مجموعه‌های خودکار با قوانین محلی", p.accent) { go(ui, Route.SmartCrate) }
+                    DrawerItem(Icons.Rounded.AutoAwesome, "Smart Crate", "مجموعه‌های خودکار با قوانین محلی", p.accent) { go(ui, Route.SmartCrate) }
                     Spacer(Modifier.height(8.dp))
                     DrawerSection("ابزارها")
                     DrawerItem(Icons.Rounded.Equalizer, "Audio Lab", "اکولایزر، بیس و افکت‌های صدا", p.accent) { go(ui, Route.Lab) }
