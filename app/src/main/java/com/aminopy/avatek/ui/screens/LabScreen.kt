@@ -150,7 +150,8 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
             }
             // speed
             Column(Modifier.fillMaxWidth().staggerIn(2).glass(RoundedCornerShape(30.dp), strength = 0.6f).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("سرعت پخش", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)\n                Text("۰٫۵ تا ۲ برابر · بازنشانی کامل، سرعت را به ۱× برمی‌گرداند", color = p.muted, fontSize = 11.sp)
+                Text("سرعت پخش", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text("۰٫۵ تا ۲ برابر · بازنشانی کامل، سرعت را به ۱× برمی‌گرداند", color = p.muted, fontSize = 11.sp)
                 SpeedPicker(vm)
             }
             // sleep
