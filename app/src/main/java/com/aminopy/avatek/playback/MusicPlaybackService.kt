@@ -42,6 +42,7 @@ class MusicPlaybackService : MediaSessionService() {
     private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var crossfadeDurationMs = 0L
     private var crossfading = false
+    private var musicAudioAttributes: AudioAttributes? = null
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
@@ -70,9 +71,10 @@ class MusicPlaybackService : MediaSessionService() {
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
+        musicAudioAttributes = audioAttributes
         fun buildPlayer(handleAudioFocus: Boolean): ExoPlayer = ExoPlayer.Builder(this, renderers)
             .setAudioAttributes(audioAttributes, handleAudioFocus)
-            .setHandleAudioBecomingNoisy(handleAudioFocus)
+            .setHandleAudioBecomingNoisy(true)
             .build()
         val exo = buildPlayer(true)
         val spare = buildPlayer(false).apply { volume = 0f }
@@ -165,6 +167,11 @@ class MusicPlaybackService : MediaSessionService() {
                 if (completed && player === active && active.currentMediaItemIndex == sourceIndex) {
                     spare.volume = 1f
                     active.pause()
+                    val attrs = musicAudioAttributes
+                    if (attrs != null) {
+                        spare.setAudioAttributes(attrs, true)
+                        active.setAudioAttributes(attrs, false)
+                    }
                     mediaSession?.setPlayer(spare)
                     active.removeListener(sessionListener)
                     spare.addListener(sessionListener)
