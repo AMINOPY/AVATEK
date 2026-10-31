@@ -152,7 +152,21 @@ fun SettingsScreen(vm: AvatekViewModel, ui: AppUi) {
                 ToggleRow("اعلان اختصاصی AVATEK", "اعلان پخش با رنگ تم و برچسب AVATEK. اگر خاموش باشد، اعلان استاندارد آهنگ سیستم نشان داده می‌شود.", s.customNotification) { v -> vm.updateSettings { it.copy(customNotification = v) } }
                 ToggleRow("لرزش لمسی", "بازخورد خفیف هنگام لمس دکمه‌ها.", s.haptics) { v -> vm.updateSettings { it.copy(haptics = v) } }
             }
-            Section("کتابخانه", 1) {
+            Section("اعلان‌های بومی اندروید", 2) {
+                Text(
+                    "کنترل‌های استاندارد پخش اندروید از طریق MediaSession و Media3 در اعلان، صفحه‌ی قفل و پنل اعلان‌ها نمایش داده می‌شوند. مجوز اعلان در Android 13 به بالا جداگانه مدیریت می‌شود.",
+                    color = p.muted, fontSize = 12.sp, lineHeight = 18.sp
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassChip("درخواست مجوز اعلان", false, { ui.requestNotifications() })
+                    GlassChip("تنظیمات اعلان سیستم", false, { ui.manageNotifications() })
+                }
+                Text(
+                    "اگر اعلان‌ها نمایش داده نمی‌شوند، مجوز AVATEK و کانال «AVATEK پخش‌کننده» را در تنظیمات سیستم بررسی کن.",
+                    color = p.muted, fontSize = 10.sp, lineHeight = 15.sp
+                )
+            }
+            Section("کتابخانه", 3) {
                 Text("نادیده‌گرفتن آهنگ‌های کوتاه‌تر از", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text("برای حذف صدای نوتیفیکیشن و ضبط‌های کوتاه.", color = p.muted, fontSize = 11.sp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,24 +176,24 @@ fun SettingsScreen(vm: AvatekViewModel, ui: AppUi) {
                 }
                 AccentButton("اسکن دوباره‌ی کتابخانه", { vm.scan() })
             }
-            Section("پخش و صدا", 2) {
+            Section("پخش و صدا", 4) {
                 Text("اکولایزر، بیس، سرعت و تایمر خواب در آزمایشگاه صدا هستند.", color = p.muted, fontSize = 12.sp)
                 GlassChip("باز کردن آزمایشگاه صدا", false, { ui.nav.selectTab(Route.Lab) })
             }
-            Section("حریم خصوصی", 3) {
+            Section("حریم خصوصی", 5) {
                 Text("تاریخچه‌ی پخش و جست‌وجو فقط روی همین دستگاه ذخیره می‌شود.", color = p.muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassChip("پاک‌کردن جست‌وجوها", false, { vm.clearSearches(); vm.showToast("جست‌وجوها پاک شد") })
                 }
             }
-            Section("پشتیبان‌گیری و بازیابی", 4) {
+            Section("پشتیبان‌گیری و بازیابی", 6) {
                 Text("تنظیمات، علاقه‌مندی‌ها، پلی‌لیست‌ها، تاریخچه، اکولایزر، صف پخش و متن‌های آفلاین در یک فایل محلی ذخیره می‌شوند. فایل‌های موسیقی کپی نمی‌شوند.", color = p.muted, fontSize = 12.sp, lineHeight = 18.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GlassChip("خروجی پشتیبان", false, { ui.requestBackupExport() })
                     GlassChip("بازیابی پشتیبان", false, { ui.requestBackupImport() })
                 }
             }
-            Section("درباره", 5) {
+            Section("درباره", 7) {
                 Row(
                     Modifier.fillMaxWidth().bounceClick(pressedScale = 0.97f) { ui.nav.push(Route.About) },
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
