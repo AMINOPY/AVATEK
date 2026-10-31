@@ -269,7 +269,8 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
         return tracks.filter {
-            it.title.contains(q, true) || it.artist.contains(q, true) || it.album.contains(q, true)
+            it.title.contains(q, true) || it.artist.contains(q, true) || it.album.contains(q, true) ||
+                it.folderPath.contains(q, true) || it.genre.contains(q, true)
         }
     }
 
