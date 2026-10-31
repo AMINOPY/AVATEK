@@ -20,7 +20,7 @@ class LrcParserTest {
     @Test
     fun appliesGlobalOffsetAndClampsNegativeTimes() {
         val result = LrcParser.parse("[offset:-1500]\n[00:01.00]Before\n[00:02.00]After")
-        assertEquals(listOf(LyricLine(500L, "After")), result)
+        assertEquals(listOf(LyricLine(0L, "Before"), LyricLine(500L, "After")), result)
     }
 
     @Test
