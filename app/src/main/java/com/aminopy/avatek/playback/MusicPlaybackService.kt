@@ -154,7 +154,7 @@ class MusicPlaybackService : MediaSessionService() {
             var completed = false
             try {
                 while (isActive) {
-                    if (player !== active || active.currentMediaItemIndex != sourceIndex || !active.isPlaying) break
+                    if (player !== active || active.currentMediaItemIndex != sourceIndex || !active.isPlaying || crossfadeDurationMs <= 0L) break
                     val fraction = ((SystemClock.elapsedRealtime() - startedAt).toFloat() /
                         crossfadeDurationMs.coerceAtLeast(1L)).coerceIn(0f, 1f)
                     active.volume = 1f - fraction
@@ -176,6 +176,7 @@ class MusicPlaybackService : MediaSessionService() {
             } finally {
                 crossfading = false
                 if (player === active) {
+                    active.volume = 1f
                     spare.pause()
                     spare.volume = 0f
                 }
