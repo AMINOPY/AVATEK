@@ -38,6 +38,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.QueueMusic
@@ -210,6 +212,25 @@ fun NowPlayingScreen(vm: AvatekViewModel, ui: AppUi) {
                 FavoriteButton(track.id in vm.favorites, { vm.toggleFavorite(track.id) }, size = 52.dp)
             }
 
+            AnimatedVisibility(visible = vm.lyricsVisible) {
+                Column(
+                    Modifier.fillMaxWidth().glass(RoundedCornerShape(22.dp), tint = p.accent, strength = 0.48f).padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (vm.lyrics.isEmpty()) {
+                        Text("برای این آهنگ هنوز متن آفلاین نداری", color = p.muted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        ToolPill(Icons.Rounded.Add, "واردکردن فایل LRC") { ui.requestLyricsImport() }
+                    } else {
+                        Text(vm.activeLyric?.text ?: "♪", color = p.text, fontSize = 17.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        vm.nextLyric?.takeIf { it.timeMs > vm.positionMs }?.let {
+                            Text(it.text, color = p.muted, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        ToolPill(Icons.Rounded.Add, "جایگزینی متن") { ui.requestLyricsImport() }
+                    }
+                }
+            }
+
             if (settings.visualizer) {
                 RhythmVisualizer(vm.isPlaying, Modifier.fillMaxWidth().height(38.dp).padding(top = 8.dp), bars = 44)
             }
@@ -251,6 +272,7 @@ fun NowPlayingScreen(vm: AvatekViewModel, ui: AppUi) {
             // quick tools
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 ToolPill(Icons.Rounded.QueueMusic, "صف ${vm.queueIds.size.fa()}") { ui.show(Sheet.Queue) }
+                ToolPill(Icons.Rounded.Subtitles, "متن", active = vm.lyricsVisible) { vm.toggleLyrics() }
                 ToolPill(Icons.Rounded.Bedtime, vm.sleepRemainingMs?.let { faDuration(it) } ?: "خواب", active = vm.sleepRemainingMs != null) { ui.show(Sheet.Sleep) }
                 ToolPill(Icons.Rounded.Speed, "${vm.speed}x".fa(), active = vm.speed != 1f) { ui.show(Sheet.Speed) }
                 ToolPill(Icons.Rounded.PlaylistAdd, "پلی‌لیست") { ui.show(Sheet.AddToPlaylist(track.id)) }
