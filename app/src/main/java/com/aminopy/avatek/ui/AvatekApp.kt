@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aminopy.avatek.state.AvatekViewModel
 import com.aminopy.avatek.ui.components.FloatingNavBar
+import com.aminopy.avatek.ui.components.AvatekDrawer
 import com.aminopy.avatek.ui.components.MiniPlayer
 import com.aminopy.avatek.ui.components.SheetHost
 import com.aminopy.avatek.ui.components.ToastHost
@@ -145,6 +146,7 @@ fun AvatekApp(
                     ) { if (wasteland) WastelandNavBar(nav) else FloatingNavBar(nav, haze) }
                 }
 
+                AvatekDrawer(vm, ui)
                 SheetHost(vm, ui)
                 ToastHost(vm.toast)
                 AnimatedVisibility(splash, exit = fadeOut(tween(550)) + scaleOut(tween(550), targetScale = 1.12f)) {
