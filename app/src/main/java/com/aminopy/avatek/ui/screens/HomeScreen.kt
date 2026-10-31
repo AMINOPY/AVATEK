@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
@@ -104,6 +106,8 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
     val recent = vm.recentlyPlayed()
     val top = vm.mostPlayed(5)
     val added = vm.recentlyAdded(5)
+    val dailyMix = vm.dailyMix(30)
+    val discoveryMix = vm.discoveryMix(30)
     val sortedAll = vm.sorted(vm.tracks, SortMode.Title)
 
     LazyColumn(
@@ -153,6 +157,14 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickTile(Icons.Rounded.Shuffle, "پخش تصادفی", "همه‌ی آهنگ‌ها", p.secondary, Modifier.weight(1f)) { vm.playList(sortedAll, shuffled = true); ui.openPlayer() }
                     QuickTile(Icons.Rounded.GraphicEq, "آزمایشگاه صدا", "اکولایزر و بیس", Color(0xFF5EEAD4), Modifier.weight(1f)) { ui.nav.selectTab(Route.Lab) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickTile(Icons.Rounded.AutoAwesome, "میکس روزانه", "ترکیب هوشمند سلیقه‌ات", p.accent, Modifier.weight(1f)) {
+                        vm.playList(dailyMix, shuffled = true); ui.openPlayer()
+                    }
+                    QuickTile(Icons.Rounded.Explore, "کشف دوباره", "آهنگ‌های کمتر شنیده‌شده", Color(0xFF5EEAD4), Modifier.weight(1f)) {
+                        vm.playList(discoveryMix, shuffled = true); ui.openPlayer()
+                    }
                 }
             }
         }
