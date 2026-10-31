@@ -32,12 +32,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -78,7 +83,7 @@ import com.aminopy.avatek.ui.theme.staggerIn
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val LibraryTabs = listOf("آهنگ‌ها", "آلبوم‌ها", "هنرمندان", "پلی‌لیست‌ها")
+private val LibraryTabs = listOf("آهنگ‌ها", "آلبوم‌ها", "هنرمندان", "پوشه‌ها", "سبک‌ها", "لیست‌ها")
 
 @Composable
 fun LibraryScreen(vm: AvatekViewModel, ui: AppUi) {
@@ -86,7 +91,7 @@ fun LibraryScreen(vm: AvatekViewModel, ui: AppUi) {
         HomeScreen(vm, ui)
         return
     }
-    val pager = rememberPagerState(initialPage = vm.libraryTab.coerceIn(0, 3)) { LibraryTabs.size }
+    val pager = rememberPagerState(initialPage = vm.libraryTab.coerceIn(0, LibraryTabs.lastIndex)) { LibraryTabs.size }
     val scope = rememberCoroutineScope()
     LaunchedEffect(pager.currentPage) { vm.libraryTab = pager.currentPage }
 
@@ -103,6 +108,8 @@ fun LibraryScreen(vm: AvatekViewModel, ui: AppUi) {
                 0 -> SongsPage(vm, ui)
                 1 -> AlbumsPage(vm, ui)
                 2 -> ArtistsPage(vm, ui)
+                3 -> FoldersPage(vm, ui)
+                4 -> GenresPage(vm, ui)
                 else -> PlaylistsPage(vm, ui)
             }
         }
@@ -207,6 +214,92 @@ private fun ArtistsPage(vm: AvatekViewModel, ui: AppUi) {
                 }
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, null, tint = p.muted)
             }
+        }
+    }
+}
+
+@Composable
+private fun FoldersPage(vm: AvatekViewModel, ui: AppUi) {
+    val bottom = LocalBottomInset.current
+    val p = LocalPalette.current
+    val groups = remember(vm.tracks) { vm.tracks.groupBy { it.folderPath }.toSortedMap() }
+    var selected by remember { mutableStateOf<String?>(null) }
+    val selectedTracks = selected?.let { groups[it].orEmpty() }.orEmpty()
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottom),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (selected != null) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GlassChip("بازگشت به پوشه‌ها", false, { selected = null })
+                    AccentButton("پخش پوشه", { vm.playList(selectedTracks); ui.openPlayer() }, icon = Icons.Rounded.PlayArrow, enabled = selectedTracks.isNotEmpty())
+                }
+            }
+            itemsIndexed(selectedTracks, key = { _, t -> t.id }) { i, t ->
+                TrackRow(t, selectedTracks, Modifier.staggerIn(i))
+            }
+        } else {
+            items(groups.entries.toList(), key = { it.key }) { (folder, tracks) ->
+                Row(
+                    Modifier.fillMaxWidth().bounceClick(pressedScale = 0.97f) { selected = folder }
+                        .glass(RoundedCornerShape(22.dp), strength = 0.42f).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Rounded.Folder, null, tint = p.accent, modifier = Modifier.size(28.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(folder, color = p.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${tracks.size.fa()} آهنگ", color = p.muted, fontSize = 11.sp)
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, null, tint = p.muted)
+                }
+            }
+            if (groups.isEmpty()) item { EmptyState(Icons.Rounded.Folder, "پوشه‌ای پیدا نشد", "بعد از اسکن کتابخانه، پوشه‌های موسیقی اینجا نمایش داده می‌شوند.") }
+        }
+    }
+}
+
+@Composable
+private fun GenresPage(vm: AvatekViewModel, ui: AppUi) {
+    val bottom = LocalBottomInset.current
+    val p = LocalPalette.current
+    val groups = remember(vm.tracks) { vm.tracks.groupBy { it.genre }.toSortedMap() }
+    var selected by remember { mutableStateOf<String?>(null) }
+    val selectedTracks = selected?.let { groups[it].orEmpty() }.orEmpty()
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottom),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (selected != null) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GlassChip("بازگشت به سبک‌ها", false, { selected = null })
+                    AccentButton("پخش سبک", { vm.playList(selectedTracks); ui.openPlayer() }, icon = Icons.Rounded.PlayArrow, enabled = selectedTracks.isNotEmpty())
+                }
+            }
+            itemsIndexed(selectedTracks, key = { _, t -> t.id }) { i, t ->
+                TrackRow(t, selectedTracks, Modifier.staggerIn(i))
+            }
+        } else {
+            items(groups.entries.toList(), key = { it.key }) { (genre, tracks) ->
+                Row(
+                    Modifier.fillMaxWidth().bounceClick(pressedScale = 0.97f) { selected = genre }
+                        .glass(RoundedCornerShape(22.dp), strength = 0.42f).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Rounded.Category, null, tint = p.accent, modifier = Modifier.size(28.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(genre, color = p.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${tracks.size.fa()} آهنگ", color = p.muted, fontSize = 11.sp)
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, null, tint = p.muted)
+                }
+            }
+            if (groups.isEmpty()) item { EmptyState(Icons.Rounded.Category, "سبکی پیدا نشد", "اطلاعات سبک از نمایه‌ی محلی موسیقی خوانده می‌شود.") }
         }
     }
 }
