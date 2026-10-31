@@ -33,6 +33,8 @@ import com.aminopy.avatek.data.UiSettings
 import com.aminopy.avatek.playback.AvatekCommands
 import com.aminopy.avatek.playback.EqualizerInfo
 import com.aminopy.avatek.playback.MusicPlaybackService
+import com.aminopy.avatek.playback.LrcParser
+import com.aminopy.avatek.playback.LyricLine
 import com.aminopy.avatek.playback.toMediaItem
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +44,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
-
-data class LyricLine(val timeMs: Long, val text: String)
 
 enum class LibraryStatus { NeedsPermission, Scanning, Ready, Empty }
 enum class SortMode(val label: String) { Title("نام"), Artist("هنرمند"), Recent("جدیدترین"), Duration("مدت"), MostPlayed("پرشنیده") }
@@ -446,7 +446,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         val raw = runCatching {
             getApplication<Application>().contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
         }.getOrNull()?.take(LyricsStore.MAX_LRC_CHARS).orEmpty()
-        val parsed = parseLrc(raw)
+        val parsed = LrcParser.parse(raw)
         if (parsed.isEmpty()) { showToast("فایل LRC معتبر یا دارای زمان‌بندی نیست"); return }
         lyricsStore.save(id, raw)
         lyrics = parsed
@@ -455,24 +455,9 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun loadLyrics(id: Long?) {
-        lyrics = id?.let { lyricsStore.load(it) }?.let(::parseLrc).orEmpty()
+        lyrics = id?.let { lyricsStore.load(it) }?.let(LrcParser::parse).orEmpty()
     }
 
-    private fun parseLrc(raw: String): List<LyricLine> {
-        val timestamp = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
-        val offset = Regex("""\[offset:([+-]?\d+)]""").find(raw)?.groupValues?.getOrNull(1)?.toLongOrNull() ?: 0L
-        return raw.lineSequence().flatMap { line ->
-            val matches = timestamp.findAll(line).toList()
-            val text = timestamp.replace(line, "").trim()
-            if (matches.isEmpty() || text.isBlank()) emptySequence()
-            else matches.asSequence().mapNotNull { match ->
-                val minutes = match.groupValues[1].toLongOrNull() ?: return@mapNotNull null
-                val seconds = match.groupValues[2].toLongOrNull() ?: return@mapNotNull null
-                val fraction = match.groupValues.getOrNull(3).orEmpty().padEnd(3, '0').take(3).toLongOrNull() ?: 0L
-                LyricLine((minutes * 60_000L + seconds * 1_000L + fraction + offset).coerceAtLeast(0L), text)
-            }
-        }.sortedBy { it.timeMs }.toList()
-    }
 
     val activeLyric: LyricLine? get() = lyrics.lastOrNull { it.timeMs <= positionMs }
     val nextLyric: LyricLine? get() = activeLyric?.let { active ->
