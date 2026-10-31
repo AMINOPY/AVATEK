@@ -368,6 +368,12 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         }.take(limit.coerceAtLeast(1))
     }
 
+    fun smartDj(limit: Int = 40): List<AudioTrack> = MusicIntelligence.smartDj(tracks, favorites, playCounts, recentIds, limit)
+
+    fun moodMix(mood: MusicMood, limit: Int = 40): List<AudioTrack> = MusicIntelligence.moodMix(mood, tracks, favorites, playCounts, recentIds, limit)
+
+    fun tasteSnapshot(): TasteSnapshot = MusicIntelligence.snapshot(tracks, favorites, playCounts)
+
     private fun recordPlay(id: Long) {
         playCounts = playCounts + (id to ((playCounts[id] ?: 0) + 1))
         recentIds = (listOf(id) + recentIds.filter { it != id }).take(HistoryStore.MAX_RECENT)
