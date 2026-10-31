@@ -18,6 +18,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.aminopy.avatek.data.AlbumInfo
+import com.aminopy.avatek.data.BackupStore
 import com.aminopy.avatek.data.ArtistInfo
 import com.aminopy.avatek.data.AudioLibraryRepository
 import com.aminopy.avatek.data.AudioPlaylist
@@ -55,6 +56,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsStore = SettingsStore(app)
     private val queueStore = QueueStore(app)
     private val lyricsStore = LyricsStore(app)
+    private val backupStore = BackupStore(app)
 
     // ---- library -------------------------------------------------------------------------------
     var status by mutableStateOf(LibraryStatus.NeedsPermission); private set
@@ -522,6 +524,38 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         bass = b.getInt(AvatekCommands.KEY_BASS),
         virtualizer = b.getInt(AvatekCommands.KEY_VIRT)
     )
+
+    // ---- backup / restore ----------------------------------------------------------------------
+    fun writeBackup(uri: Uri) {
+        val written = runCatching {
+            getApplication<Application>().contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
+                it.write(backupStore.exportJson())
+            } ?: error("Cannot open backup destination")
+        }.isSuccess
+        showToast(if (written) "پشتیبان AVATEK ذخیره شد" else "ذخیره‌ی پشتیبان انجام نشد")
+    }
+
+    fun readBackup(uri: Uri) {
+        val raw = runCatching {
+            getApplication<Application>().contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+        }.getOrNull()?.takeIf { it.length <= 2_000_000 }
+        if (raw == null || !backupStore.importJson(raw)) {
+            showToast("فایل پشتیبان معتبر نیست")
+            return
+        }
+        favorites = favoriteStore.loadFavoriteIds()
+        playlists = playlistStore.loadPlaylists()
+        playCounts = historyStore.loadPlayCounts()
+        recentIds = historyStore.loadRecent()
+        recentSearches = historyStore.loadSearches()
+        settings = settingsStore.load()
+        queueRestored = false
+        loadLyrics(currentId)
+        restoreQueueIfReady()
+        if (status != LibraryStatus.NeedsPermission) scan()
+        refreshEqualizer()
+        showToast("پشتیبان بازیابی شد")
+    }
 
     // ---- settings & toast ----------------------------------------------------------------------
     fun updateSettings(transform: (UiSettings) -> UiSettings) {
