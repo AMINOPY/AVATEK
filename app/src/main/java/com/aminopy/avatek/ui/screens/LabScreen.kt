@@ -20,6 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,10 +72,20 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
     val p = LocalPalette.current
     val bottom = LocalBottomInset.current
     val eq = vm.eq
+    var confirmReset by remember { mutableStateOf(false) }
     LaunchedEffect(vm.engineReady) { if (vm.engineReady) vm.refreshEqualizer() }
 
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("بازنشانی کامل Audio Engine") },
+            text = { Text("اکولایزر، بیس، فضاسازی، تقویت بلندی و سرعت پخش به حالت پیش‌فرض برمی‌گردند. این کار صف پخش و فایل‌های موسیقی را تغییر نمی‌دهد." ) },
+            confirmButton = { TextButton(onClick = { confirmReset = false; vm.resetEqualizer() }) { Text("بازنشانی") } },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("انصراف") } }
+        )
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = bottom)) {
-        ScreenHeader("آزمایشگاه صدا", subtitle = "اکولایزر واقعی، بیس و فضاسازی")
+        ScreenHeader("Audio Engine", subtitle = "کنسول پردازش صدا · کنترل زنده و قابل بازنشانی")
         Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // equalizer
             Column(
@@ -83,7 +95,7 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("اکولایزر", color = p.text, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                        Text(if (eq.available) "روی خروجی پلیر اعمال می‌شود" else "روی این دستگاه / تا شروع پخش در دسترس نیست", color = p.muted, fontSize = 11.sp)
+                        Text(if (eq.available) "موتور افکت متصل · تغییرات روی خروجی پخش اعمال می‌شوند" else "برای فعال‌شدن افکت‌ها ابتدا یک آهنگ پخش کن", color = p.muted, fontSize = 11.sp)
                     }
                     Switch(
                         checked = eq.enabled, onCheckedChange = { vm.setEqEnabled(it) }, enabled = eq.available,
@@ -122,14 +134,16 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 EffectSlider("تقویت بیس", eq.bass, eq.available) { vm.setBass(it) }
-                EffectSlider("فضاسازی (سه‌بعدی)", eq.virtualizer, eq.available) { vm.setVirtualizer(it) }
-                Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.CenterStart) {
-                    GlassChip("بازنشانی همه", false, { vm.resetEqualizer() })
+                EffectSlider("فضاسازی سه‌بعدی", eq.virtualizer, eq.available) { vm.setVirtualizer(it) }
+                EffectSlider("تقویت بلندی (Loudness)", eq.loudness, eq.available) { vm.setLoudness(it) }
+                Text("تقویت بلندی با پردازش LoudnessEnhancer اندروید انجام می‌شود؛ میزان قابل‌اعمال به سخت‌افزار و مسیر صوتی دستگاه وابسته است.", color = p.muted, fontSize = 10.sp)
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.CenterStart) {
+                    GlassChip("بازنشانی کامل موتور صدا", false, { confirmReset = true })
                 }
             }
             // speed
             Column(Modifier.fillMaxWidth().staggerIn(2).glass(RoundedCornerShape(30.dp), strength = 0.6f).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("سرعت پخش", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text("سرعت پخش", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)\n                Text("۰٫۵ تا ۲ برابر · بازنشانی کامل، سرعت را به ۱× برمی‌گرداند", color = p.muted, fontSize = 11.sp)
                 SpeedPicker(vm)
             }
             // sleep
