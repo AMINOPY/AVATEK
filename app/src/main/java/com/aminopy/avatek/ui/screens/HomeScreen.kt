@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.Refresh
@@ -121,7 +122,11 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
                 Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 14.dp).staggerIn(0),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
+                Box(
+                    Modifier.size(46.dp).bounceClick { ui.openDrawer() }.glass(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.Menu, "منوی اصلی", tint = p.text, modifier = Modifier.size(23.dp)) }
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(greeting, color = p.muted, fontSize = 13.sp)
                     Text(
                         "AVATEK",
