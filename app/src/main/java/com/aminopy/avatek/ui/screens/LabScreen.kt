@@ -80,6 +80,7 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
     var confirmReset by remember { mutableStateOf(false) }
     var selectedPreset by remember { mutableStateOf("تخت") }
     var profileName by remember { mutableStateOf("") }
+    var crossfadeLocal by remember(vm.crossfadeDurationMs) { mutableStateOf(vm.crossfadeDurationMs / 1000f) }
     LaunchedEffect(vm.engineReady) { if (vm.engineReady) vm.refreshEqualizer() }
 
     if (confirmReset) {
@@ -176,7 +177,16 @@ fun LabScreen(vm: AvatekViewModel, ui: AppUi) {
 
             Column(Modifier.fillMaxWidth().glass(RoundedCornerShape(30.dp), strength = 0.55f).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("انتقال بین آهنگ‌ها", color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                Text("پخش فهرستی Media3 انتقال استاندارد را مدیریت می‌کند. Crossfade هم‌پوشانِ دو منبع صوتی هنوز در موتور پخش فعال نشده و تا زمان پیاده‌سازی دوپلیره، گزینه‌ی ساختگی نمایش داده نمی‌شود.", color = p.muted, fontSize = 11.sp)
+                Text(if (vm.crossfadeDurationMs == 0L) "Crossfade خاموش است" else "مدت هم‌پوشانی: ${vm.crossfadeDurationMs / 1000L} ثانیه", color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Slider(
+                    value = crossfadeLocal,
+                    onValueChange = { crossfadeLocal = it },
+                    onValueChangeFinished = { vm.setCrossfadeDuration((crossfadeLocal * 1000).toLong()) },
+                    valueRange = 0f..12f,
+                    steps = 11,
+                    colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = Color.White.copy(alpha = 0.15f))
+                )
+                Text("هم‌پوشانی واقعی با دو پلیر مستقل انجام می‌شود. در حالت Shuffle و Repeat One برای جلوگیری از ناهماهنگی صف، Crossfade خودکار غیرفعال است؛ پخش عادی فهرست همچنان از مسیر Media3 استفاده می‌کند.", color = p.muted, fontSize = 10.sp)
             }
             // speed
             Column(Modifier.fillMaxWidth().staggerIn(2).glass(RoundedCornerShape(30.dp), strength = 0.6f).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
