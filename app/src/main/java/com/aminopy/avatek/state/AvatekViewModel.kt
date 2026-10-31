@@ -219,6 +219,34 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     fun recentlyPlayed(limit: Int = 12): List<AudioTrack> = recentIds.mapNotNull { byId[it] }.take(limit)
     fun recentlyAdded(limit: Int = 12): List<AudioTrack> = tracks.sortedByDescending { it.dateAddedSec }.take(limit)
 
+    /**
+     * Local-first daily mix. It favors liked and frequently played tracks while gently
+     * resurfacing recent listening; a day-based seed keeps the order stable for the day.
+     */
+    fun dailyMix(limit: Int = 30): List<AudioTrack> {
+        val daySeed = System.currentTimeMillis() / 86_400_000L
+        val recentRank = recentIds.withIndex().associate { it.value to it.index }
+        return tracks.sortedByDescending { track ->
+            val favoriteBoost = if (track.id in favorites) 48.0 else 0.0
+            val playBoost = ((playCounts[track.id] ?: 0).coerceAtMost(30)) * 2.2
+            val recentBoost = recentRank[track.id]?.let { (24 - it).coerceAtLeast(0) * 0.8 } ?: 0.0
+            val addedDays = if (track.dateAddedSec > 0L) daySeed - track.dateAddedSec / 86_400L else Long.MAX_VALUE
+            val freshBoost = if (addedDays in 0..14) (14 - addedDays) * 0.7 else 0.0
+            val dailyVariation = Random(daySeed + track.id).nextDouble() * 5.0
+            favoriteBoost + playBoost + recentBoost + freshBoost + dailyVariation
+        }.take(limit.coerceAtLeast(1))
+    }
+
+    /** Discovery mix deliberately prioritizes tracks that have rarely or never been played. */
+    fun discoveryMix(limit: Int = 30): List<AudioTrack> {
+        val daySeed = System.currentTimeMillis() / 86_400_000L
+        return tracks.sortedWith(
+            compareBy<AudioTrack> { playCounts[it.id] ?: 0 }
+                .thenByDescending { it.dateAddedSec }
+                .thenBy { Random(daySeed + it.id).nextInt() }
+        ).take(limit.coerceAtLeast(1))
+    }
+
     private fun recordPlay(id: Long) {
         playCounts = playCounts + (id to ((playCounts[id] ?: 0) + 1))
         recentIds = (listOf(id) + recentIds.filter { it != id }).take(HistoryStore.MAX_RECENT)
