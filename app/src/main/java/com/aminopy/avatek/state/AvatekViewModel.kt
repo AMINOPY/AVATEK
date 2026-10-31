@@ -24,6 +24,8 @@ import com.aminopy.avatek.data.AudioTrack
 import com.aminopy.avatek.data.FavoriteStore
 import com.aminopy.avatek.data.HistoryStore
 import com.aminopy.avatek.data.PlaylistStore
+import com.aminopy.avatek.data.QueueSnapshot
+import com.aminopy.avatek.data.QueueStore
 import com.aminopy.avatek.data.SettingsStore
 import com.aminopy.avatek.data.UiSettings
 import com.aminopy.avatek.playback.AvatekCommands
@@ -47,6 +49,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private val playlistStore = PlaylistStore(app)
     private val historyStore = HistoryStore(app)
     private val settingsStore = SettingsStore(app)
+    private val queueStore = QueueStore(app)
 
     // ---- library -------------------------------------------------------------------------------
     var status by mutableStateOf(LibraryStatus.NeedsPermission); private set
@@ -87,6 +90,8 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
 
     private var controller: MediaController? = null
     private var future: ListenableFuture<MediaController>? = null
+    private var tracksLoaded = false
+    private var queueRestored = false
 
     val currentTrack: AudioTrack? get() = currentId?.let { byId[it] }
     fun trackById(id: Long): AudioTrack? = byId[id]
@@ -100,11 +105,11 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
                 currentId?.let { recordPlay(it) }
             }
         }
-        override fun onIsPlayingChanged(isPlaying: Boolean) { this@AvatekViewModel.isPlaying = isPlaying }
-        override fun onRepeatModeChanged(repeatMode: Int) { this@AvatekViewModel.repeatMode = repeatMode }
-        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { shuffle = shuffleModeEnabled }
+        override fun onIsPlayingChanged(isPlaying: Boolean) { this@AvatekViewModel.isPlaying = isPlaying; persistQueue() }
+        override fun onRepeatModeChanged(repeatMode: Int) { this@AvatekViewModel.repeatMode = repeatMode; persistQueue() }
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { shuffle = shuffleModeEnabled; persistQueue() }
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) = syncQueue()
-        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) { speed = playbackParameters.speed }
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) { speed = playbackParameters.speed; persistQueue() }
         override fun onPlaybackStateChanged(playbackState: Int) = syncProgress()
     }
 
@@ -114,6 +119,12 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
             while (isActive) {
                 syncProgress()
                 delay(if (isPlaying) 120L else 700L)
+            }
+        }
+        viewModelScope.launch {
+            while (isActive) {
+                delay(5_000L)
+                persistQueue()
             }
         }
     }
@@ -135,12 +146,14 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
                 speed = c.playbackParameters.speed
                 engineReady = true
                 syncQueue()
+                restoreQueueIfReady()
                 refreshEqualizer()
             }.onFailure { showToast("اتصال موتور پخش برقرار نشد") }
         }, ContextCompat.getMainExecutor(app))
     }
 
     override fun onCleared() {
+        persistQueue()
         controller?.removeListener(listener)
         future?.let { MediaController.releaseFuture(it) }
         controller = null
@@ -157,6 +170,49 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         val c = controller ?: return
         queueIds = (0 until c.mediaItemCount).mapNotNull { c.getMediaItemAt(it).mediaId.toLongOrNull() }
         queueIndex = c.currentMediaItemIndex.coerceAtLeast(0)
+        persistQueue()
+    }
+
+    /** Restores the last local queue only after both Media3 and the MediaStore library are ready. */
+    private fun restoreQueueIfReady() {
+        val c = controller ?: return
+        if (!tracksLoaded || queueRestored) return
+        queueRestored = true
+        val saved = queueStore.load() ?: return
+        val available = saved.trackIds.mapNotNull { id -> byId[id] }
+        if (available.isEmpty()) { queueStore.clear(); return }
+        val savedCurrentId = saved.trackIds.getOrNull(saved.currentIndex)
+        val restoredIndex = available.indexOfFirst { it.id == savedCurrentId }.let { if (it >= 0) it else 0 }
+        val restoredPosition = saved.positionMs.coerceAtMost(available[restoredIndex].durationMs.coerceAtLeast(0L))
+        c.setMediaItems(available.map { it.toMediaItem() }, restoredIndex, restoredPosition)
+        c.repeatMode = saved.repeatMode
+        c.shuffleModeEnabled = saved.shuffle
+        c.setPlaybackParameters(PlaybackParameters(saved.speed, 1f))
+        c.prepare()
+        c.playWhenReady = saved.playWhenReady
+        currentId = available[restoredIndex].id
+        syncQueue()
+        showToast("صف پخش قبلی بازیابی شد")
+    }
+
+    /** Persist a compact queue snapshot; audio files themselves are never copied. */
+    private fun persistQueue() {
+        if (!queueRestored) return
+        val c = controller ?: return
+        if (c.mediaItemCount == 0) { queueStore.clear(); return }
+        val ids = (0 until c.mediaItemCount).mapNotNull { c.getMediaItemAt(it).mediaId.toLongOrNull() }
+        if (ids.isEmpty()) { queueStore.clear(); return }
+        queueStore.save(
+            QueueSnapshot(
+                trackIds = ids,
+                currentIndex = c.currentMediaItemIndex.coerceIn(0, ids.lastIndex),
+                positionMs = c.currentPosition.coerceAtLeast(0L),
+                repeatMode = c.repeatMode,
+                shuffle = c.shuffleModeEnabled,
+                speed = c.playbackParameters.speed,
+                playWhenReady = c.playWhenReady
+            )
+        )
     }
 
     // ---- library -------------------------------------------------------------------------------
@@ -178,6 +234,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     private fun applyTracks(list: List<AudioTrack>) {
         tracks = list
         byId = list.associateBy { it.id }
+        tracksLoaded = true
         albums = list.groupBy { it.albumKey }.map { (key, items) ->
             AlbumInfo(key, items.first().album, items.first().artist, items.map { it.id }, items.sumOf { it.durationMs })
         }.sortedBy { it.title.lowercase() }
@@ -186,6 +243,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         }.sortedBy { it.name.lowercase() }
         // drop ids that no longer exist
         recentIds = recentIds.filter { it in byId }
+        restoreQueueIfReady()
     }
 
     fun sorted(list: List<AudioTrack>, mode: SortMode = librarySort): List<AudioTrack> = when (mode) {
@@ -365,7 +423,7 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     fun moveInQueue(from: Int, to: Int) {
         controller?.let { if (from in 0 until it.mediaItemCount && to in 0 until it.mediaItemCount) it.moveMediaItem(from, to) }
     }
-    fun clearQueue() { controller?.let { it.stop(); it.clearMediaItems() }; currentId = null; positionMs = 0L }
+    fun clearQueue() { controller?.let { it.stop(); it.clearMediaItems() }; queueStore.clear(); currentId = null; positionMs = 0L }
 
     // ---- sleep timer ---------------------------------------------------------------------------
     fun startSleepTimer(minutes: Int) = startSleep(minutes * 60_000L)
