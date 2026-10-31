@@ -521,7 +521,12 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
     })
     fun setBass(strength: Int) = sendEq(AvatekCommands.BASS, Bundle().apply { putInt(AvatekCommands.KEY_STRENGTH, strength) })
     fun setVirtualizer(strength: Int) = sendEq(AvatekCommands.VIRTUALIZER, Bundle().apply { putInt(AvatekCommands.KEY_STRENGTH, strength) })
-    fun resetEqualizer() = sendEq(AvatekCommands.EQ_RESET)
+    fun setLoudness(gain: Int) = sendEq(AvatekCommands.LOUDNESS, Bundle().apply { putInt(AvatekCommands.KEY_GAIN, gain) })
+    fun resetEqualizer() {
+        sendEq(AvatekCommands.EQ_RESET)
+        setPlaybackSpeed(1f)
+        showToast("تنظیمات موتور صدا به حالت اولیه برگشت")
+    }
 
     private fun parseEq(b: Bundle): EqualizerInfo = EqualizerInfo(
         available = b.getBoolean(AvatekCommands.KEY_AVAILABLE),
@@ -531,7 +536,9 @@ class AvatekViewModel(app: Application) : AndroidViewModel(app) {
         centerFreqsHz = b.getIntArray(AvatekCommands.KEY_CENTERS)?.toList().orEmpty(),
         levels = b.getIntArray(AvatekCommands.KEY_LEVELS)?.toList().orEmpty(),
         bass = b.getInt(AvatekCommands.KEY_BASS),
-        virtualizer = b.getInt(AvatekCommands.KEY_VIRT)
+        virtualizer = b.getInt(AvatekCommands.KEY_VIRT),
+        loudness = b.getInt(AvatekCommands.KEY_LOUDNESS),
+        loudnessEnabled = b.getBoolean(AvatekCommands.KEY_LOUDNESS_ENABLED)
     )
 
     // ---- backup / restore ----------------------------------------------------------------------
