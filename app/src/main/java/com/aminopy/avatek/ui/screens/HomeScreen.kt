@@ -149,7 +149,7 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
             }
         }
         item {
-            ListeningPulseCard(vm, Modifier.padding(horizontal = 20.dp).staggerIn(3))
+            ListeningPulseCard(vm, ui, Modifier.padding(horizontal = 20.dp).staggerIn(3))
         }
         item {
             Column(Modifier.padding(horizontal = 20.dp).staggerIn(4), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -226,7 +226,7 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
 }
 
 @Composable
-private fun ListeningPulseCard(vm: AvatekViewModel, modifier: Modifier = Modifier) {
+private fun ListeningPulseCard(vm: AvatekViewModel, ui: AppUi, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     val totalPlays = vm.playCounts.values.sumOf { it.coerceAtLeast(0).toLong() }
     val uniquePlayed = vm.playCounts.count { (id, count) -> count > 0 && vm.trackById(id) != null }
@@ -252,6 +252,7 @@ private fun ListeningPulseCard(vm: AvatekViewModel, modifier: Modifier = Modifie
             Row(
                 Modifier.fillMaxWidth().bounceClick(pressedScale = 0.97f) {
                     vm.playTrackIn(vm.sorted(vm.tracks), leader)
+                    ui.openPlayer()
                 },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
