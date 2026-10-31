@@ -52,11 +52,13 @@ class MainActivity : ComponentActivity() {
     private fun requestBackupImport() { backupImportLauncher.launch(arrayOf("application/json", "text/*")) }
 
     private fun requestPermissions() {
-        if (hasAudioPermission()) { vm.scan(); return }
         val wanted = buildList {
-            add(audioPermission())
-            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+            if (!hasAudioPermission()) add(audioPermission())
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        if (wanted.isEmpty()) { vm.scan(); return }
         permissionLauncher.launch(wanted.toTypedArray())
     }
 }
