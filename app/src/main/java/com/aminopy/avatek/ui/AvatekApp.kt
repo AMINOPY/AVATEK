@@ -67,9 +67,9 @@ import dev.chrisbanes.haze.rememberHazeState
 import kotlin.math.sign
 
 @Composable
-fun AvatekApp(vm: AvatekViewModel, requestPermission: () -> Unit) {
+fun AvatekApp(vm: AvatekViewModel, requestPermission: () -> Unit, requestLyricsImport: () -> Unit = {}) {
     val nav = remember { Navigator() }
-    val ui = remember { AppUi(nav) }
+    val ui = remember { AppUi(nav, requestLyricsImport) }
     val haze = rememberHazeState()
     var splash by rememberSaveable { mutableStateOf(true) }
 
