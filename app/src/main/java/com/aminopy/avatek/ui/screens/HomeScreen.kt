@@ -160,10 +160,10 @@ fun HomeScreen(vm: AvatekViewModel, ui: AppUi) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickTile(Icons.Rounded.AutoAwesome, "میکس روزانه", "ترکیب هوشمند سلیقه‌ات", p.accent, Modifier.weight(1f)) {
-                        vm.playList(dailyMix, shuffled = true); ui.openPlayer()
+                        vm.playList(dailyMix, shuffled = false); ui.openPlayer()
                     }
                     QuickTile(Icons.Rounded.Explore, "کشف دوباره", "آهنگ‌های کمتر شنیده‌شده", Color(0xFF5EEAD4), Modifier.weight(1f)) {
-                        vm.playList(discoveryMix, shuffled = true); ui.openPlayer()
+                        vm.playList(discoveryMix, shuffled = false); ui.openPlayer()
                     }
                 }
             }
